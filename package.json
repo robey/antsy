@@ -1,0 +1,34 @@
+{
+  "name": "antsy",
+  "version": "1.0.0",
+  "description": "draw full-color (xterm-256) ansi graphics into a buffer",
+  "keywords": [ "ansi", "xterm-256" ],
+  "author": "Robey Pointer <robeypointer@gmail.com>",
+  "homepage": "https://github.com/robey/antsy",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/robey/antsy.git"
+  },
+  "licenses": [
+    {
+      "type": "Apache License 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+    }
+  ],
+  "scripts": {
+    "test": "plz --color -v test"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+    "coffee-script": "*",
+    "mocha": "*",
+    "should": "*"
+  },
+  "main": "./lib/antsy",
+  "files": [
+    "build.plz",
+    "lib",
+    "test"
+  ]
+}
