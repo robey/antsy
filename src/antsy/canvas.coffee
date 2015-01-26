@@ -9,6 +9,8 @@ RESET_ATTRIBUTES = "\u001b[0m"
 fgString = (index) -> "\u001b[38;5;#{index}m"
 bgString = (index) -> "\u001b[48;5;#{index}m"
 
+TRANSPARENT = -1
+
 class Canvas
   constructor: (@width, @height) ->
     # (y, x) indexed, with each entry: BBFFCCCCC
@@ -73,6 +75,10 @@ class Canvas
     @puti(y * @width + x, bg, fg, ch)
 
   puti: (index, bg, fg, ch) ->
+    if bg == TRANSPARENT or fg == TRANSPARENT
+      [ oldbg, oldfg, _ ] = @geti(index)
+      if bg == TRANSPARENT then bg = oldbg
+      if fg == TRANSPARENT then fg = oldfg
     # don't try to use bit operators here. in js, they truncate the number to 32 bits first.
     @grid[index] = bg * Math.pow(2, 28) + fg * Math.pow(2, 20) + ch
 
@@ -86,3 +92,5 @@ class Canvas
 
 exports.Canvas = Canvas
 exports.RESET_ATTRIBUTES = RESET_ATTRIBUTES
+exports.TRANSPARENT = TRANSPARENT
+

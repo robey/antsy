@@ -21,7 +21,7 @@
   "dependencies": {
   },
   "devDependencies": {
-    "coffee-script": "*",
+    "coffee-script": "^1.7",
     "mocha": "*",
     "should": "*"
   },
