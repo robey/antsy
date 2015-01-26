@@ -1,8 +1,11 @@
 {
   "name": "antsy",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "draw full-color (xterm-256) ansi graphics into a buffer",
-  "keywords": [ "ansi", "xterm-256" ],
+  "keywords": [
+    "ansi",
+    "xterm-256"
+  ],
   "author": "Robey Pointer <robeypointer@gmail.com>",
   "homepage": "https://github.com/robey/antsy",
   "repository": {
@@ -18,8 +21,7 @@
   "scripts": {
     "test": "plz --color -v test"
   },
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
     "coffee-script": "^1.7",
     "mocha": "*",
