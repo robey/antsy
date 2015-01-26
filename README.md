@@ -29,6 +29,8 @@ It also understands the three-letter alternate forms ("f00") and a basic set of 
 
 Canvas builds a grid of color and text information. The following API lets you draw into it. Each function returns the Canvas object, so you can chain calls using a builder pattern.
 
+You can set the foreground and/or background color to the special value `antsy.TRANSPARENT`, which will leave the previous color(s) alone when you write new text across old content.
+
 - `new Canvas(width, height)` - Build a new canvas object of the given width and height (in character cells).
 
 - `color(name)` - Set the current foreground color, by name (using the `get_color` function described above).
