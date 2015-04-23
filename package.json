@@ -1,6 +1,6 @@
 {
   "name": "antsy",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "draw full-color (xterm-256) ansi graphics into a buffer",
   "keywords": [
     "ansi",
@@ -19,11 +19,14 @@
     }
   ],
   "scripts": {
-    "test": "plz --color -v test"
+    "clean": "rm -rf lib test/lib",
+    "distclean": "npm run clean && rm -rf node_modules npm-debug.log",
+    "prepublish": "babel --source-maps --out-dir lib src && babel --source-maps --out-dir test/lib test/src",
+    "test": "mocha -R spec --colors test/lib"
   },
   "dependencies": {},
   "devDependencies": {
-    "coffee-script": "^1.7",
+    "babel": "*",
     "mocha": "*",
     "should": "*"
   },
