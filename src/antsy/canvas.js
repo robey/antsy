@@ -10,6 +10,8 @@ function fgString(index) { return `\u001b[38;5;${index}m`; }
 function bgString(index) { return `\u001b[48;5;${index}m`; }
 
 const TRANSPARENT = -1;
+const WHITE = xterm256.get_color("white");
+const BLACK = xterm256.get_color("black");
 
 class Canvas {
   constructor(width, height) {
@@ -18,9 +20,9 @@ class Canvas {
     // (y, x) indexed, with each entry: BBFFCCCCC
     // (B = bg color, F = fg color, C = 20-bit unichar)
     this.grid = new Array(this.width * this.height);
-    this.fg = xterm256.get_color("white");
-    this.bg = xterm256.get_color("black");
-    this.fillBackground("black");
+    this.fg = WHITE;
+    this.bg = BLACK;
+    this.clear();
     this.y = 0;
     this.x = 0;
   }
@@ -59,7 +61,7 @@ class Canvas {
   }
 
   clear() {
-    this.fillBackground(this.bg);
+    this.fillBackground(this.bg == TRANSPARENT ? BLACK : this.bg);
     return this;
   }
 
@@ -88,7 +90,7 @@ class Canvas {
     for (let i = 0; i < absY; i++) {
       const y = directionY > 0 ? this.height - i - 1 : i;
       for (let x = 0; x < this.width; x++) {
-        this._put(x, y, this.bg, this.fg, SPACE);
+        this._put(x, y, this.bg == TRANSPARENT ? BLACK : this.bg, this.fg, SPACE);
       }
     }
 
@@ -96,7 +98,7 @@ class Canvas {
     for (let i = 0; i < absX; i++) {
       const x = directionX > 0 ? this.width - i - 1 : i;
       for (let y = 0; y < this.height; y++) {
-        this._put(x, y, this.bg, this.fg, SPACE);
+        this._put(x, y, this.bg == TRANSPARENT ? BLACK : this.bg, this.fg, SPACE);
       }
     }
   }
