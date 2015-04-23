@@ -58,6 +58,49 @@ class Canvas {
     return this;
   }
 
+  clear() {
+    this.fillBackground(this.bg);
+    return this;
+  }
+
+  scroll(deltaX, deltaY) {
+    const directionX = deltaX < 0 ? -1 : 1;
+    const directionY = deltaY < 0 ? -1 : 1;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (absX >= this.width || absY >= this.height) {
+      this.clear();
+      return;
+    }
+
+    for (let i = 0; i < this.height - absY; i++) {
+      const destY = directionY > 0 ? i : this.height - i - 1;
+      const sourceY = destY + deltaY;
+      for (let j = 0; j < this.width - absX; j++) {
+        const destX = directionX > 0 ? j : this.width - j - 1;
+        const sourceX = destX + deltaX;
+        this._move(sourceX, sourceY, destX, destY);
+      }
+    }
+
+    // pad vertical
+    for (let i = 0; i < absY; i++) {
+      const y = directionY > 0 ? this.height - i - 1 : i;
+      for (let x = 0; x < this.width; x++) {
+        this._put(x, y, this.bg, this.fg, SPACE);
+      }
+    }
+
+    // pad horizontal
+    for (let i = 0; i < absX; i++) {
+      const x = directionX > 0 ? this.width - i - 1 : i;
+      for (let y = 0; y < this.height; y++) {
+        this._put(x, y, this.bg, this.fg, SPACE);
+      }
+    }
+  }
+
   fillBackground(color) {
     this.backgroundColor(color);
     for (let i = 0; i < this.width * this.height; i++) {
@@ -108,9 +151,13 @@ class Canvas {
   }
 
   _geti(index) {
-    const x = this.grid[index];
-    const colors = Math.floor(x / Math.pow(2, 20));
-    return [ colors >> 8, colors & 0xff, x & 0xfffff ];
+    const cell = this.grid[index];
+    const colors = Math.floor(cell / Math.pow(2, 20)) & 0xffff;
+    return [ colors >> 8, colors & 0xff, cell & 0xfffff ];
+  }
+
+  _move(sourceX, sourceY, destX, destY) {
+    this.grid[destY * this.width + destX] = this.grid[sourceY * this.width + sourceX];
   }
 }
 
