@@ -5,8 +5,10 @@ require("should");
 
 const WHITE_ON_BLACK = "\u001b[48;5;0m\u001b[38;5;15m";
 const GREEN_ON_BLACK = "\u001b[48;5;0m\u001b[38;5;2m";
+const BLACK_ON_BLACK = "\u001b[48;5;0m\u001b[38;5;0m";
 const SET_FG_GREEN = "\u001b[38;5;2m";
 const SET_FG_RED = "\u001b[38;5;9m";
+const SET_FG_BLACK = "\u001b[38;5;0m";
 const SET_BG_BLUE = "\u001b[48;5;12m";
 const RESET = canvas.RESET_ATTRIBUTES;
 
@@ -57,8 +59,8 @@ describe("canvas", () => {
         `${GREEN_ON_BLACK}  X  ${RESET}`,
         `${GREEN_ON_BLACK}   Y ${RESET}`,
         `${GREEN_ON_BLACK}     ${RESET}`,
-        `${GREEN_ON_BLACK}     ${RESET}`,
-        `${GREEN_ON_BLACK}     ${RESET}`
+        `${BLACK_ON_BLACK}     ${RESET}`,
+        `${BLACK_ON_BLACK}     ${RESET}`
       ]);
     });
 
@@ -66,8 +68,8 @@ describe("canvas", () => {
       const c = xyq();
       c.scroll(0, -2);
       c.toStrings().should.eql([
-        `${GREEN_ON_BLACK}     ${RESET}`,
-        `${GREEN_ON_BLACK}     ${RESET}`,
+        `${BLACK_ON_BLACK}     ${RESET}`,
+        `${BLACK_ON_BLACK}     ${RESET}`,
         `${GREEN_ON_BLACK}     ${RESET}`,
         `${GREEN_ON_BLACK} Q   ${RESET}`,
         `${GREEN_ON_BLACK}  X  ${RESET}`
@@ -78,11 +80,11 @@ describe("canvas", () => {
       const c = xyq();
       c.scroll(2, 0);
       c.toStrings().should.eql([
-        `${GREEN_ON_BLACK}     ${RESET}`,
-        `${GREEN_ON_BLACK}     ${RESET}`,
-        `${GREEN_ON_BLACK}X    ${RESET}`,
-        `${GREEN_ON_BLACK} Y   ${RESET}`,
-        `${GREEN_ON_BLACK}     ${RESET}`
+        `${GREEN_ON_BLACK}   ${SET_FG_BLACK}  ${RESET}`,
+        `${GREEN_ON_BLACK}   ${SET_FG_BLACK}  ${RESET}`,
+        `${GREEN_ON_BLACK}X  ${SET_FG_BLACK}  ${RESET}`,
+        `${GREEN_ON_BLACK} Y ${SET_FG_BLACK}  ${RESET}`,
+        `${GREEN_ON_BLACK}   ${SET_FG_BLACK}  ${RESET}`
       ]);
     });
 
@@ -90,11 +92,11 @@ describe("canvas", () => {
       const c = xyq();
       c.scroll(-2, 0);
       c.toStrings().should.eql([
-        `${GREEN_ON_BLACK}     ${RESET}`,
-        `${GREEN_ON_BLACK}   Q ${RESET}`,
-        `${GREEN_ON_BLACK}    X${RESET}`,
-        `${GREEN_ON_BLACK}     ${RESET}`,
-        `${GREEN_ON_BLACK}     ${RESET}`
+        `${BLACK_ON_BLACK}  ${SET_FG_GREEN}   ${RESET}`,
+        `${BLACK_ON_BLACK}  ${SET_FG_GREEN} Q ${RESET}`,
+        `${BLACK_ON_BLACK}  ${SET_FG_GREEN}  X${RESET}`,
+        `${BLACK_ON_BLACK}  ${SET_FG_GREEN}   ${RESET}`,
+        `${BLACK_ON_BLACK}  ${SET_FG_GREEN}   ${RESET}`
       ]);
     });
 
@@ -102,11 +104,11 @@ describe("canvas", () => {
       const c = xyq();
       c.scroll(-1, 1);
       c.toStrings().should.eql([
-        `${GREEN_ON_BLACK}  Q  ${RESET}`,
-        `${GREEN_ON_BLACK}   X ${RESET}`,
-        `${GREEN_ON_BLACK}    Y${RESET}`,
-        `${GREEN_ON_BLACK}     ${RESET}`,
-        `${GREEN_ON_BLACK}     ${RESET}`
+        `${BLACK_ON_BLACK} ${SET_FG_GREEN} Q  ${RESET}`,
+        `${BLACK_ON_BLACK} ${SET_FG_GREEN}  X ${RESET}`,
+        `${BLACK_ON_BLACK} ${SET_FG_GREEN}   Y${RESET}`,
+        `${BLACK_ON_BLACK} ${SET_FG_GREEN}    ${RESET}`,
+        `${BLACK_ON_BLACK}     ${RESET}`
       ]);
     });
   });

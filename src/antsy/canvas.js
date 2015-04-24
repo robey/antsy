@@ -71,26 +71,36 @@ class Canvas {
     const absX = Math.abs(deltaX);
     const absY = Math.abs(deltaY);
 
+    const bg = this.bg == TRANSPARENT ? BLACK : this.bg;
+    const blank = bg * Math.pow(2, 28) + SPACE;
+
     if (absX >= this.width || absY >= this.height) {
       this.clear();
       return;
     }
 
+    const destX = directionX > 0 ? 0 : absX;
+    const sourceX = directionX > 0 ? absX : 0;
+    const widthX = this.width - absX;
     for (let i = 0; i < this.height - absY; i++) {
       const destY = directionY > 0 ? i : this.height - i - 1;
+      const destIndex = destY * this.width + destX;
       const sourceY = destY + deltaY;
-      for (let j = 0; j < this.width - absX; j++) {
-        const destX = directionX > 0 ? j : this.width - j - 1;
-        const sourceX = destX + deltaX;
-        this._move(sourceX, sourceY, destX, destY);
+      const sourceIndex = sourceY * this.width + sourceX;
+      // splice is dog-slow here! :(
+      if (directionX > 0) {
+        for (let j = 0; j < widthX; j++) this.grid[destIndex + j] = this.grid[sourceIndex + j];
+      } else {
+        for (let j = widthX - 1; j >= 0; j--) this.grid[destIndex + j] = this.grid[sourceIndex + j];
       }
     }
 
     // pad vertical
     for (let i = 0; i < absY; i++) {
       const y = directionY > 0 ? this.height - i - 1 : i;
+      const index = y * this.width;
       for (let x = 0; x < this.width; x++) {
-        this._put(x, y, this.bg == TRANSPARENT ? BLACK : this.bg, this.fg, SPACE);
+        this.grid[index + x] = blank;
       }
     }
 
@@ -98,7 +108,7 @@ class Canvas {
     for (let i = 0; i < absX; i++) {
       const x = directionX > 0 ? this.width - i - 1 : i;
       for (let y = 0; y < this.height; y++) {
-        this._put(x, y, this.bg == TRANSPARENT ? BLACK : this.bg, this.fg, SPACE);
+        this.grid[y * this.width + x] = blank;
       }
     }
   }
@@ -111,7 +121,7 @@ class Canvas {
     return this;
   }
 
-  toStrings() {
+  toStrings(options = {}) {
     const rv = [];
     for (let y = 0; y < this.height; y++) {
       let line = "";
@@ -156,10 +166,6 @@ class Canvas {
     const cell = this.grid[index];
     const colors = Math.floor(cell / Math.pow(2, 20)) & 0xffff;
     return [ colors >> 8, colors & 0xff, cell & 0xfffff ];
-  }
-
-  _move(sourceX, sourceY, destX, destY) {
-    this.grid[destY * this.width + destX] = this.grid[sourceY * this.width + sourceX];
   }
 }
 
