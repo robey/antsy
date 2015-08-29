@@ -8,7 +8,7 @@ var canvas = new antsy.Canvas(80, 24);
 canvas.at(0, 23).backgroundColor("#00f").write("i am on a blue background!");
 
 // now print it out!
-canvas.toStrings().map(function (line) { console.log(line); });
+canvas.toStrings().map(console.log);
 ```
 
 That's all it does.
@@ -41,6 +41,10 @@ You can set the foreground and/or background color to the special value `antsy.T
 
 - `write(string)` - Write the string as a series of character cells in the current foreground and background colors, starting at the current cursor position. The cursor's x position moves with each character. If it reaches the end of a line, it will wrap around to the beginning of the next line. Similarly, wrapping off the bottom of the canvas will move back to the top.
 
+- `clear()` - Fill the canvas with spaces using the current background color.
+
 - `fillBackground(colorName)` - Fill the canvas with spaces, using the given color as the background color. This is just a convenience method for clearing the canvas to a color.
+
+- `scroll(deltaX, deltaY)` - Scroll the canvas horizontally or vertically (or both). `deltaX` is the number of character cells to move left (if positive) or right (if negative). `deltaX` is the number of cells to move up (if positive) or down (if negative). A normal one-line vertical terminal scroll would be `scroll(0, 1)`.
 
 - `toStrings()` - Return an array of strings which, if written to an ansi terminal, will draw the canvas. Each string is one line of the canvas, starting at line 0 (the top).
