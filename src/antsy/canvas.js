@@ -127,6 +127,7 @@ class Canvas {
       let line = "";
       let lastbg = -1;
       let lastfg = -1;
+      let allBlank = true;
       for (let x = 0; x < this.width; x++) {
         const [ bg, fg, ch ] = this._get(x, y);
         if (lastbg != bg) line += bgString(bg);
@@ -134,9 +135,10 @@ class Canvas {
         lastbg = bg;
         lastfg = fg;
         line += String.fromCharCode(ch);
+        if (ch != SPACE) allBlank = false;
       }
       line += RESET_ATTRIBUTES;
-      rv.push(line);
+      rv.push(options.dropBlanks && allBlank ? "" : line);
     }
     return rv;
   }
