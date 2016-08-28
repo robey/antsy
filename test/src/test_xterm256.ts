@@ -1,7 +1,6 @@
-const util = require("util");
-const xterm256 = require("../../lib/antsy/xterm256");
+import * as xterm256 from "../../src/antsy/xterm256";
 
-require("should");
+import "should";
 
 describe("xterm256", () => {
   describe("finds the nearest", () => {

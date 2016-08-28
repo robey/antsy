@@ -19,21 +19,20 @@
     }
   ],
   "scripts": {
-    "clean": "rm -rf lib test/lib",
+    "build": "tsc",
+    "clean": "rm -rf built",
     "distclean": "npm run clean && rm -rf node_modules npm-debug.log",
-    "prepublish": "babel --source-maps --out-dir lib src && babel --source-maps --out-dir test/lib test/src",
-    "test": "mocha -R spec --colors test/lib"
+    "prepublish": "npm run build",
+    "test": "npm run build && mocha -R spec --colors built/test/src"
   },
   "dependencies": {},
   "devDependencies": {
-    "babel": "*",
     "mocha": "*",
-    "should": "*"
+    "should": "*",
+    "typescript": "^1.8.10"
   },
-  "main": "./lib/antsy",
+  "main": "./built/src/antsy",
   "files": [
-    "build.plz",
-    "lib",
-    "test"
+    "built"
   ]
 }

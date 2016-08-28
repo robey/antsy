@@ -1,8 +1,6 @@
-"use strict";
+// a subset of the web color names, for convenience.
 
-// a subset of the web color names, for convenience
-
-exports.COLOR_NAMES = {
+export const COLOR_NAMES = {
   "aqua": "0ff",
   "black": "000",
   "blue": "00f",
