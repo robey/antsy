@@ -32,7 +32,6 @@
   "main": "./lib/antsy.js",
   "types": "./lib/antsy.d.ts",
   "files": [
-    "built/src",
-    "declarations/src/antsy"
+    "lib/"
   ]
 }
