@@ -1,7 +1,6 @@
-const canvas = require("../../lib/antsy/canvas");
-const util = require("util");
+import * as canvas from "../antsy/canvas";
 
-require("should");
+import "should";
 
 const WHITE_ON_BLACK = "\u001b[48;5;0m\u001b[38;5;15m";
 const GREEN_ON_BLACK = "\u001b[48;5;0m\u001b[38;5;2m";

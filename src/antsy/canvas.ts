@@ -1,22 +1,26 @@
-const xterm256 = require("./xterm256");
+import * as xterm256 from "./xterm256";
 
 const SPACE = " ".charCodeAt(0);
 
 const UNDERLINE_START = "\u001b[4m";
 const UNDERLINE_STOP = "\u001b[24m";
-const RESET_ATTRIBUTES = "\u001b[0m";
+export const RESET_ATTRIBUTES = "\u001b[0m";
 
-function fgString(index) { return `\u001b[38;5;${index}m`; }
-function bgString(index) { return `\u001b[48;5;${index}m`; }
+function fgString(index: number): string { return `\u001b[38;5;${index}m`; }
+function bgString(index: number): string { return `\u001b[48;5;${index}m`; }
 
-const TRANSPARENT = -1;
+export const TRANSPARENT = -1;
 const WHITE = xterm256.get_color("white");
 const BLACK = xterm256.get_color("black");
 
-class Canvas {
-  constructor(width, height) {
-    this.width = width;
-    this.height = height;
+export class Canvas {
+  private grid: number[];
+  private x: number;
+  private y: number;
+  private fg: number;
+  private bg: number;
+
+  constructor(public width: number, public height: number) {
     // (y, x) indexed, with each entry: BBFFCCCCC
     // (B = bg color, F = fg color, C = 20-bit unichar)
     this.grid = new Array(this.width * this.height);
@@ -27,25 +31,23 @@ class Canvas {
     this.x = 0;
   }
 
-  color(c) {
-    if (typeof c == "string") c = xterm256.get_color(c);
-    this.fg = c;
+  color(c: string | number): this {
+    this.fg = typeof c === "string" ? xterm256.get_color(c) : c;
     return this;
   }
 
-  backgroundColor(c) {
-    if (typeof c == "string") c = xterm256.get_color(c);
-    this.bg = c;
+  backgroundColor(c: string | number): this {
+    this.bg = typeof c === "string" ? xterm256.get_color(c) : c;
     return this;
   }
 
-  at(x, y) {
+  at(x: number, y: number): this {
     this.x = x;
     this.y = y;
     return this;
   }
 
-  write(s) {
+  write(s: string): this {
     for (let i = 0; i < s.length; i++) {
       this._put(this.x, this.y, this.bg, this.fg, s[i]);
       this.x += 1;
@@ -60,12 +62,12 @@ class Canvas {
     return this;
   }
 
-  clear() {
+  clear(): this {
     this.fillBackground(this.bg == TRANSPARENT ? BLACK : this.bg);
     return this;
   }
 
-  scroll(deltaX, deltaY) {
+  scroll(deltaX: number, deltaY: number): this {
     const directionX = deltaX < 0 ? -1 : 1;
     const directionY = deltaY < 0 ? -1 : 1;
     const absX = Math.abs(deltaX);
@@ -76,7 +78,7 @@ class Canvas {
 
     if (absX >= this.width || absY >= this.height) {
       this.clear();
-      return;
+      return this;
     }
 
     const destX = directionX > 0 ? 0 : absX;
@@ -111,9 +113,11 @@ class Canvas {
         this.grid[y * this.width + x] = blank;
       }
     }
+
+    return this;
   }
 
-  fillBackground(color) {
+  fillBackground(color: string | number): this {
     this.backgroundColor(color);
     for (let i = 0; i < this.width * this.height; i++) {
       this._puti(i, this.bg, this.fg, SPACE);
@@ -121,8 +125,8 @@ class Canvas {
     return this;
   }
 
-  toStrings(options = {}) {
-    const rv = [];
+  toStrings(options: { dropBlanks?: boolean } = {}): string[] {
+    const rv: string[] = [];
     for (let y = 0; y < this.height; y++) {
       let line = "";
       let lastbg = -1;
@@ -145,12 +149,11 @@ class Canvas {
 
   // ----- implementation details:
 
-  _put(x, y, bg, fg, ch) {
-    if (typeof ch == "string") ch = ch.charCodeAt(0);
-    this._puti(y * this.width + x, bg, fg, ch);
+  private _put(x: number, y: number, bg: number, fg: number, ch: string | number): void {
+    this._puti(y * this.width + x, bg, fg, typeof ch === "string" ? ch.charCodeAt(0) : ch);
   }
 
-  _puti(index, bg, fg, ch) {
+  private _puti(index: number, bg: number, fg: number, ch: number): void {
     if (bg == TRANSPARENT || fg == TRANSPARENT) {
       const [ oldbg, oldfg, _ ] = this._geti(index);
       if (bg == TRANSPARENT) bg = oldbg;
@@ -160,18 +163,13 @@ class Canvas {
     this.grid[index] = bg * Math.pow(2, 28) + fg * Math.pow(2, 20) + ch;
   }
 
-  _get(x, y) {
+  private _get(x: number, y: number): [ number, number, number ] {
     return this._geti(y * this.width + x);
   }
 
-  _geti(index) {
+  private _geti(index: number): [ number, number, number ] {
     const cell = this.grid[index];
     const colors = Math.floor(cell / Math.pow(2, 20)) & 0xffff;
     return [ colors >> 8, colors & 0xff, cell & 0xfffff ];
   }
 }
-
-
-exports.Canvas = Canvas;
-exports.RESET_ATTRIBUTES = RESET_ATTRIBUTES;
-exports.TRANSPARENT = TRANSPARENT;
