@@ -46,7 +46,7 @@ export function color_from_hex(hex: string): number {
     parseInt(realhex.slice(0, 2), 16),
     parseInt(realhex.slice(2, 4), 16),
     parseInt(realhex.slice(4, 6), 16)
-  ];
+  ] as number[];
   const index = nearest_color(red, green, blue);
   cache[hex] = index;
   return index;

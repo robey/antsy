@@ -126,7 +126,7 @@ export class Canvas {
   }
 
   toStrings(options: { dropBlanks?: boolean } = {}): string[] {
-    const rv = [];
+    const rv: string[] = [];
     for (let y = 0; y < this.height; y++) {
       let line = "";
       let lastbg = -1;

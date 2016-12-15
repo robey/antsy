@@ -12,27 +12,27 @@
     "type": "git",
     "url": "git://github.com/robey/antsy.git"
   },
-  "licenses": [
-    {
-      "type": "Apache License 2.0",
-      "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
-    }
-  ],
+  "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
-    "clean": "rm -rf built",
+    "clean": "rm -rf lib",
     "distclean": "npm run clean && rm -rf node_modules npm-debug.log",
     "prepublish": "npm run build",
-    "test": "npm run build && mocha -R spec --colors built/test/src"
+    "test": "npm run build && mocha -R spec --colors lib/test"
   },
   "dependencies": {},
   "devDependencies": {
-    "mocha": "*",
-    "should": "*",
-    "typescript": "^1.8.10"
+    "@types/mocha": "^2.2.33",
+    "@types/should": "^8.1.30",
+    "mocha": "^3.0.2",
+    "should": "^11.1.0",
+    "typescript": "^2.0.0",
+    "typings": "^1.3.3"
   },
-  "main": "./built/src/antsy",
+  "main": "./lib/antsy.js",
+  "types": "./lib/antsy.d.ts",
   "files": [
-    "built"
+    "built/src",
+    "declarations/src/antsy"
   ]
 }

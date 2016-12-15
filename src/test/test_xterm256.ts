@@ -1,4 +1,4 @@
-import * as xterm256 from "../../src/antsy/xterm256";
+import * as xterm256 from "../antsy/xterm256";
 
 import "should";
 

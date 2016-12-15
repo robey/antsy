@@ -1,4 +1,4 @@
-import * as canvas from "../../src/antsy/canvas";
+import * as canvas from "../antsy/canvas";
 
 import "should";
 
