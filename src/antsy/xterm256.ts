@@ -27,7 +27,7 @@ ANSI_LINE[7] = [ 0xc0, 0xc0, 0xc0 ];
 
 const HEX_RE = /^[\da-fA-F]{3}([\da-fA-F]{3})?$/;
 
-const cache = {};
+const cache: { [key: string]: number } = {};
 
 // parse a color name, or "#fff" or "#cc0033" into a color index
 export function get_color(name: string): number {

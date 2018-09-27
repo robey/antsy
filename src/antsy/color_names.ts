@@ -1,6 +1,6 @@
 // a subset of the web color names, for convenience.
 
-export const COLOR_NAMES = {
+export const COLOR_NAMES: { [key: string]: string } = {
   "aqua": "0ff",
   "black": "000",
   "blue": "00f",
