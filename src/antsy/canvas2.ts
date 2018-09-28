@@ -83,7 +83,9 @@ class TextBuffer {
 
   isSame(x: number, y: number, other: TextBuffer): boolean {
     const i = this.cols * y + x;
-    return this.attrs[i] == other.attrs[i] && this.chars[i] == other.chars[i];
+    if (this.chars[i] != other.chars[i]) return false;
+    if (this.chars[i] == SPACE) return ((this.attrs[i] >> 8) & 0xff) == ((other.attrs[i] >> 8) & 0xff);
+    return this.attrs[i] == other.attrs[i];
   }
 
   blankLine(y: number, attr: number) {
@@ -91,6 +93,10 @@ class TextBuffer {
       this.attrs[i] = attr;
       this.chars[i] = SPACE;
     }
+  }
+
+  clearToEndOfLine(x: number, y: number, attr: number = this.attr) {
+    for (; x < this.cols; x++) this.put(x, y, attr, SPACE);
   }
 
   clear() {
@@ -162,6 +168,11 @@ export class Canvas {
     return this;
   }
 
+  clearToEndOfLine(): this {
+    this.nextBuffer.clearToEndOfLine(this.nextBuffer.cursorX, this.nextBuffer.cursorY);
+    return this;
+  }
+
 
   // ----- paint routines
 
@@ -181,13 +192,7 @@ export class Canvas {
       // everything, do that. update currentBuffer before calculating dirty
       // spans.
       let score = this.checkForEraseOptimisation(y);
-      if (score) {
-        // out += this.moveCurrent(score.x, y)
-        // out += Terminal.changePackedColor(attr, score.attr);
-        // out += Terminal.eraseLine();
-        // attr = score.attr;
-        for (let x = score.x; x < this.cols; x++) this.currentBuffer.put(x, y, score.attr, SPACE);
-      }
+      if (score) this.currentBuffer.clearToEndOfLine(score.x, y, score.attr);
 
       this.getDirtySpans(y).forEach(([ left, right ]) => {
         // optimization: if the cursor is just before the dirty span, start from the cursor instead.
