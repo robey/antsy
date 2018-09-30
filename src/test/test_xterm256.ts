@@ -6,27 +6,27 @@ describe("xterm256", () => {
   describe("finds the nearest", () => {
     it("color cube", () => {
       xterm256.nearest_color_cube(0, 0, 0).should.eql([ 0, 0 ]);
-      xterm256.nearest_color_cube(47, 47, 47).should.eql([ 0, Math.sqrt(3 * 47 * 47) ]);
-      xterm256.nearest_color_cube(48, 48, 48).should.eql([ 1 * 36 + 1 * 6 + 1, Math.sqrt(3 * 47 * 47) ]);
-      xterm256.nearest_color_cube(255, 140, 2).should.eql([ 5 * 36 + 2 * 6 + 0, Math.sqrt(5 * 5 + 2 * 2) ]);
-      xterm256.nearest_color_cube(127, 0, 250).should.eql([ 2 * 36 + 0 * 6 + 5, Math.sqrt(8 * 8 + 5 * 5) ]);
+      xterm256.nearest_color_cube(47, 47, 47).should.eql([ 0, 3 * 47 * 47 ]);
+      xterm256.nearest_color_cube(48, 48, 48).should.eql([ 1 * 36 + 1 * 6 + 1, 3 * 47 * 47 ]);
+      xterm256.nearest_color_cube(255, 140, 2).should.eql([ 5 * 36 + 2 * 6 + 0, 5 * 5 + 2 * 2 ]);
+      xterm256.nearest_color_cube(127, 0, 250).should.eql([ 2 * 36 + 0 * 6 + 5, 8 * 8 + 5 * 5 ]);
       xterm256.nearest_color_cube(255, 255, 255).should.eql([ 5 * 36 + 5 * 6 + 5, 0 ]);
     });
 
     it("gray", () => {
-      xterm256.nearest_gray(0, 0, 0).should.eql([ 0, Math.sqrt(3 * 8 * 8) ]);
+      xterm256.nearest_gray(0, 0, 0).should.eql([ 0, 3 * 8 * 8 ]);
       xterm256.nearest_gray(18, 18, 18).should.eql([ 1, 0 ]);
-      xterm256.nearest_gray(17, 19, 20).should.eql([ 1, Math.sqrt(1 + 1 + 4) ]);
-      xterm256.nearest_gray(255, 255, 255).should.eql([ 23, Math.sqrt(3 * 17 * 17) ]);
-      xterm256.nearest_gray(127, 127, 127).should.eql([ 12, Math.sqrt(3) ]);
-      xterm256.nearest_gray(0, 128, 64).should.eql([ 6, Math.sqrt(68 * 68 + 60 * 60 + 4 * 4) ]);
+      xterm256.nearest_gray(17, 19, 20).should.eql([ 1, 1 + 1 + 4 ]);
+      xterm256.nearest_gray(255, 255, 255).should.eql([ 23, 3 * 17 * 17 ]);
+      xterm256.nearest_gray(127, 127, 127).should.eql([ 12, 3 ]);
+      xterm256.nearest_gray(0, 128, 64).should.eql([ 6, 68 * 68 + 60 * 60 + 4 * 4 ]);
     });
 
     it("ansi color", () => {
       xterm256.nearest_ansi(0, 0, 0).should.eql([ 0, 0 ]);
       xterm256.nearest_ansi(0xc0, 0xc0, 0xc0).should.eql([ 7, 0 ]);
-      xterm256.nearest_ansi(250, 250, 250).should.eql([ 15, Math.sqrt(3 * 5 * 5) ]);
-      xterm256.nearest_ansi(64, 32, 200).should.eql([ 12, Math.sqrt(64 * 64 + 32 * 32 + 55 * 55) ]);
+      xterm256.nearest_ansi(250, 250, 250).should.eql([ 15, 3 * 5 * 5 ]);
+      xterm256.nearest_ansi(64, 32, 200).should.eql([ 12, 64 * 64 + 32 * 32 + 55 * 55 ]);
     });
 
     it("color, in general", () => {
