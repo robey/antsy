@@ -191,8 +191,8 @@ export class Canvas {
       // if erasing the line from some cell would be cheaper than redrawing
       // everything, do that. update currentBuffer before calculating dirty
       // spans.
-      let score = this.checkForEraseOptimisation(y);
-      if (score) this.currentBuffer.clearToEndOfLine(score.x, y, score.attr);
+      let blanks = this.checkForEraseOptimisation(y);
+      for (const b of blanks) this.currentBuffer.clearToEndOfLine(b.x, y, b.attr);
 
       this.getDirtySpans(y).forEach(([ left, right ]) => {
         // optimization: if the cursor is just before the dirty span, start from the cursor instead.
@@ -202,9 +202,9 @@ export class Canvas {
           left - this.currentBuffer.cursorX <= MIN_TAB
         ) left = this.currentBuffer.cursorX;
 
-        if (score && score.x < left) {
-          out += this.moveCurrent(score.x, y) + this.changeCurrentAttr(score.attr) + Terminal.eraseLine();
-          score = undefined;
+        if (blanks[0] && blanks[0].x < left) {
+          const b = blanks.shift();
+          if (b) out += this.moveCurrent(b.x, y) + this.changeCurrentAttr(b.attr) + Terminal.eraseLine();
         }
         out += this.moveCurrent(left, y);
         for (let x = left; x < right; x++) {
@@ -217,8 +217,9 @@ export class Canvas {
       });
 
       // erase happened after all the dirty bits.
-      if (score) {
-        out += this.moveCurrent(score.x, y) + this.changeCurrentAttr(score.attr) + Terminal.eraseLine();
+      while (blanks.length > 0) {
+        const b = blanks.shift();
+        if (b) out += this.moveCurrent(b.x, y) + this.changeCurrentAttr(b.attr) + Terminal.eraseLine();
       }
     }
 
@@ -282,48 +283,61 @@ export class Canvas {
    *
    * i'm highly skeptical that this is worth doing, but it was fun.
    */
-  private checkForEraseOptimisation(y: number): AttrScore | undefined {
-    // as we find blanks, track a running score of how advantageous it would
-    // be to erase the remainder of the line to that attr.
-    const scores: AttrScore[] = [];
+  private checkForEraseOptimisation(y: number): AttrScore[] {
+    // track the current run of blanks with the same background attr
+    let run: AttrScore | undefined;
+    // potential locations & attrs to do a clear-to-end-of-line from. these
+    // are all "runs" that had at least THRESHOLD_BLANKS spaces in a row.
+    const candidates: AttrScore[] = [];
 
     for (let x = 0; x < this.cols; x++) {
       const attr = this.nextBuffer.isBlank(x, y);
       if (attr === undefined) {
+        // not blank: -1 point for everyone if it's unchanged, +0 if it's
+        // changed (we have to draw it anyway). kill any run.
+        run = undefined;
         if (this.nextBuffer.isSame(x, y, this.currentBuffer)) {
-          // not blank, unchanged: -1 point for everyone
-          scores.forEach(s => s.score--);
+          candidates.forEach(s => s.score--);
         }
-        // not blank, changed: +0 neutral (we have to paint it anyway)
       } else {
+        const bg = (attr >> 8) & 0xff;
+
+        // extend any current run, or start a new one.
+        if (run && run.bg == bg) {
+          // once a run reaches the threshold, it's worth scoring.
+          if (x - run.x + 1 >= THRESHOLD_BLANKS) {
+            candidates.push(run);
+            run = undefined;
+          }
+        } else {
+          run = new AttrScore(attr, bg, x, 0);
+        }
+
         if (!this.nextBuffer.isSame(x, y, this.currentBuffer)) {
           // blank, changed: +1 to this attr, -1 to others.
-          // (if we've been tracking this attr already, but it has a negative
-          // score, start fresh. up till now it would have done more damage
-          // than good, but it might do better starting from here.)
-          const s = scores.find(s => s.attr == attr && s.score > 0);
-          if (!s) {
-            scores.push(new AttrScore(attr, x, 1));
-          } else {
-            s.score++;
-          }
+          for (const s of candidates) s.score += (s.bg == bg ? 1 : -1);
+          if (run) run.score++;
+        } else {
+          // blank, unchanged: -1 to any cell of a different attr
+          for (const s of candidates) if (s.bg != bg) s.score--;
         }
-        // blank, unchanged: -1 to any cell of a different attr
-        scores.forEach(s => {
-          if (s.attr != attr) s.score--;
-        });
       }
     }
 
-    // sort highest score at top. if the best one beat the threshold, use it.
-    scores.sort((a, b) => b.score - a.score);
-    if (scores.length > 0 && scores[0].score >= THRESHOLD_BLANKS) return scores[0];
-    return undefined;
+    // keep only the ones with a score above 2 ([[K vs space), sort them by
+    // x, and drop any redundant ones that just repeat the previous bg color.
+    const sorted = candidates.filter(s => s.score > 2).sort((a, b) => a.x - b.x);
+    return sorted.filter((s, i) => i == 0 || sorted[i - 1].bg != s.bg);
   }
 }
 
 class AttrScore {
-  constructor(public attr: number, public x: number, public score: number) {
+  constructor(
+    public attr: number,
+    public bg: number,  // (attr >> 8) & 0xff, for convenience
+    public x: number,
+    public score: number
+  ) {
     // pass
   }
 }

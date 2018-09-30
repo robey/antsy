@@ -66,13 +66,22 @@ describe("Canvas", () => {
       escpaint(c).should.eql(`[[10D[[K`);
     });
 
-    it("three times", () => {
+    it("around the middle", () => {
       const c = new Canvas(30, 3);
       c.at(0, 0).write("012345678901234567890123456789");
       escpaint(c).should.eql(`${RESET}012345678901234567890123456789`);
       c.at(0, 0).color(undefined, 2).clearToEndOfLine();
       c.at(10, 0).color(undefined, 5).write("          ");
-      escpaint(c).should.eql("[[30D[[42m[[K");
+      escpaint(c).should.eql("[[30D[[42m[[K[[10C[[45m          ");
+    });
+
+    it("three times", () => {
+      const c = new Canvas(35, 3);
+      c.at(0, 0).write("01234567890123456789012345678901234");
+      escpaint(c).should.eql(`${RESET}01234567890123456789012345678901234`);
+      c.at(0, 0).color(undefined, 2).clearToEndOfLine();
+      c.at(8, 0).color(undefined, 5).write("               ");
+      escpaint(c).should.eql("[[35D[[42m[[K[[8C[[45m[[K[[15C[[42m[[K");
     });
   });
 
