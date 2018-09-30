@@ -39,6 +39,9 @@ describe("Canvas", () => {
     c.at(8, 0).write("ok");
     c.at(10, 2).write("cat");
     escpaint(c).should.eql(`${RESET}hi[[6Cok[[2Bcat`);
+    escpaint(c).should.eql("");
+    c.at(0, 0).write("hi");
+    escpaint(c).should.eql("");
   });
 
   describe("uses clear-to-EOL while painting", () => {

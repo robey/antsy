@@ -96,5 +96,4 @@ function find_closest(n: number, list: number[]): number {
     }
   }
   return candidate;
-  // return list.map((item, index) => [ Math.abs(item - n), index ]).sort((a, b) => a[0] - b[0])[0][1];
 }
