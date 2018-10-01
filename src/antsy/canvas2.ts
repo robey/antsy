@@ -9,7 +9,6 @@ const MIN_TAB = 5;
 // during paint, if we see this many blanks in a row, check if clear-to-end-of-line would help
 const THRESHOLD_BLANKS = 8;
 
-
 export class Canvas {
   // next: what we're drawing
   private nextBuffer: TextBuffer;
@@ -22,7 +21,6 @@ export class Canvas {
     this.clear();
     this.currentBuffer.set(this.nextBuffer);
     this.currentBuffer.attr = -1;
-    this.nextBuffer.clearDirty();
   }
 
   // reset entire screen to blank, with the current fg/bg color
@@ -71,20 +69,30 @@ export class Canvas {
     return this;
   }
 
+  scrollUp(x1: number, y1: number, x2: number, y2: number, n: number): this {
+    for (let y = y1; y < y2 - n; y++) {
+      this.nextBuffer.copySegment(x1, x2, y, y + n);
+    }
+    for (let y = y2 - n; y < y2; y++) {
+      this.nextBuffer.clearSegment(x1, x2, y);
+    }
+    return this;
+  }
+
 
   // ----- paint routines
 
   paint(): string {
     let out = "";
-    if (this.nextBuffer.dirtyClear) {
-      out += this.changeCurrentAttr(this.nextBuffer.dirtyClear) + Terminal.clearScreen();
+    if (this.nextBuffer.pendingClear) {
+      out += this.changeCurrentAttr(this.nextBuffer.pendingClear) + Terminal.clearScreen();
       this.currentBuffer.clear();
-      delete this.nextBuffer.dirtyClear;
     }
 
+    this.checkForScroll();
+
     for (let y = 0; y < this.rows; y++) {
-      if (this.nextBuffer.dirty[y] == 0) continue;
-      this.nextBuffer.dirty[y] = 0;
+      if (!this.nextBuffer.isDirty(y)) continue;
 
       // if erasing the line from some cell would be cheaper than redrawing
       // everything, do that. update currentBuffer before calculating dirty
@@ -121,6 +129,7 @@ export class Canvas {
       }
     }
 
+    this.nextBuffer.clearDirty();
     return out;
   }
 
