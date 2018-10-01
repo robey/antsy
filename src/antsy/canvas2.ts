@@ -97,8 +97,10 @@ export class Canvas {
       // if erasing the line from some cell would be cheaper than redrawing
       // everything, do that. update currentBuffer before calculating dirty
       // spans.
-      let blanks = this.checkForEraseOptimisation(y);
-      for (const b of blanks) this.currentBuffer.clearToEndOfLine(b.x, y, b.attr);
+      const distance = this.computeRowDistance(y);
+      for (let i = 0; i < distance.clearLineAttrs.length; i++) {
+        this.currentBuffer.clearToEndOfLine(distance.clearLineOffsets[i], y, distance.clearLineAttrs[i]);
+      }
 
       this.getDirtySpans(y).forEach(([ left, right ]) => {
         // optimization: if the cursor is just before the dirty span, start from the cursor instead.
@@ -108,9 +110,12 @@ export class Canvas {
           left - this.currentBuffer.cursorX <= MIN_TAB
         ) left = this.currentBuffer.cursorX;
 
-        if (blanks[0] && blanks[0].x < left) {
-          const b = blanks.shift();
-          if (b) out += this.moveCurrent(b.x, y) + this.changeCurrentAttr(b.attr) + Terminal.eraseLine();
+        if (distance.clearLineOffsets.length > 0 && distance.clearLineOffsets[0] < left) {
+          const x = distance.clearLineOffsets[0];
+          const attr = distance.clearLineAttrs[0];
+          out += this.moveCurrent(x, y) + this.changeCurrentAttr(attr) + Terminal.eraseLine();
+          distance.clearLineOffsets.shift();
+          distance.clearLineAttrs.shift();
         }
         out += this.moveCurrent(left, y);
         for (let x = left; x < right; x++) {
@@ -123,9 +128,12 @@ export class Canvas {
       });
 
       // erase happened after all the dirty bits.
-      while (blanks.length > 0) {
-        const b = blanks.shift();
-        if (b) out += this.moveCurrent(b.x, y) + this.changeCurrentAttr(b.attr) + Terminal.eraseLine();
+      while (distance.clearLineOffsets.length > 0) {
+        const x = distance.clearLineOffsets[0];
+        const attr = distance.clearLineAttrs[0];
+        out += this.moveCurrent(x, y) + this.changeCurrentAttr(attr) + Terminal.eraseLine();
+        distance.clearLineOffsets.shift();
+        distance.clearLineAttrs.shift();
       }
     }
 
@@ -179,63 +187,118 @@ export class Canvas {
     return spans;
   }
 
-  /*
-   * scan the line, looking for cells that are newly blank. for each new
-   * blank we find, pretend we did an "erase to end of line" operation there,
-   * and score how much better or worse our paint work would be in that case:
-   * subtract 1 point for each cell we'd need to redraw that was untouched
-   * before, and add 1 point for each cell we were about to redraw but could
-   * now skip. if any "erase to end of line" operation passes some "worth it"
-   * threshold, pick the best.
-   *
-   * i'm highly skeptical that this is worth doing, but it was fun.
-   */
-  private checkForEraseOptimisation(y: number): AttrScore[] {
+  private computeRowDistance(ydest: number, ysource: number = ydest): LineDistance {
+    // difference between source & dist lines, in # of cells that have to be redrawn
+    let distance = 0;
     // track the current run of blanks with the same background attr
     let run: AttrScore | undefined;
-    // potential locations & attrs to do a clear-to-end-of-line from. these
-    // are all "runs" that had at least THRESHOLD_BLANKS spaces in a row.
+    // potential locations & attrs to do a clear-to-end-of-line (clrtoeol).
+    // these are all "runs" of at least THRESHOLD_BLANKS spaces. score them
+    // to see if they make things better or worse.
     const candidates: AttrScore[] = [];
 
     for (let x = 0; x < this.cols; x++) {
-      const attr = this.nextBuffer.isBlank(x, y);
-      if (attr === undefined) {
-        // not blank: -1 point for everyone if it's unchanged, +0 if it's
-        // changed (we have to draw it anyway). kill any run.
+      const blankAttr = this.nextBuffer.isBlank(x, ydest);
+      const bg = blankAttr === undefined ? undefined : (blankAttr >> 8) & 0xff;
+      const same = this.nextBuffer.isSame(x, ydest, this.currentBuffer, ysource);
+
+      if (!same) distance++;
+
+      // if we don't need to redraw this cell, penalize all clrtoeol
+      // candidates unless the original cell is the clrtoeol blank.
+      if (same) for (const c of candidates) if (c.bg != bg) c.score--;
+
+      if (blankAttr === undefined || bg === undefined) {
+        // not blank
         run = undefined;
-        if (this.nextBuffer.isSame(x, y, this.currentBuffer)) {
-          candidates.forEach(s => s.score--);
+        continue;
+      }
+
+      // extend any current run, or start a new one.
+      if (run && run.bg == bg) {
+        // once a run reaches the threshold, it's worth scoring.
+        if (x - run.x + 1 >= THRESHOLD_BLANKS) {
+          candidates.push(run);
+          run = undefined;
         }
       } else {
-        const bg = (attr >> 8) & 0xff;
+        run = new AttrScore(blankAttr, bg, x);
+      }
 
-        // extend any current run, or start a new one.
-        if (run && run.bg == bg) {
-          // once a run reaches the threshold, it's worth scoring.
-          if (x - run.x + 1 >= THRESHOLD_BLANKS) {
-            candidates.push(run);
-            run = undefined;
-          }
-        } else {
-          run = new AttrScore(attr, bg, x, 0);
+      // blank: +1 to any chained candidate of this attr. -1 to any chained
+      // candidate if the bg color matches a previous candidate.
+      let matchedOne = false;
+      for (const s of candidates) {
+        if (s.bg == bg) {
+          s.chainScore++;
+          matchedOne = true;
+        } else if (matchedOne) {
+          s.chainScore--;
         }
+      }
+      if (run) run.chainScore++;
 
-        if (!this.nextBuffer.isSame(x, y, this.currentBuffer)) {
-          // blank, changed: +1 to this attr, -1 to others.
-          for (const s of candidates) s.score += (s.bg == bg ? 1 : -1);
-          if (run) run.score++;
-        } else {
-          // blank, unchanged: -1 to any cell of a different attr
-          for (const s of candidates) if (s.bg != bg) s.score--;
-        }
+      // blank: +1 to any candidate of this attr if we needed to redraw
+      if (!same) {
+        for (const s of candidates) if (s.bg == bg) s.score++;
+        if (run) run.score++;
       }
     }
 
-    // keep only the ones with a score above 2 ([[K vs space), sort them by
-    // x, and drop any redundant ones that just repeat the previous bg color.
-    const sorted = candidates.filter(s => s.score > 2).sort((a, b) => a.x - b.x);
-    return sorted.filter((s, i) => i == 0 || sorted[i - 1].bg != s.bg);
+    // keep only the ones with a score at least 3 ([[K vs space).
+    let clearLineOffsets: number[] = [];
+    let clearLineAttrs: number[] = [];
+    while (candidates.length > 0 && candidates[0].score < 3) candidates.shift();
+    if (candidates.length > 0) {
+      clearLineOffsets.push(candidates[0].x);
+      clearLineAttrs.push(candidates[0].attr);
+      // filter the rest by their "chained" score, and ensure they change the bg color.
+      const rest = candidates.filter((c, i) => i == 0 || c.chainScore >= 3);
+      for (const c of rest.filter((c, i) => i > 0 && candidates[i - 1].bg != c.bg)) {
+        clearLineOffsets.push(c.x);
+        clearLineAttrs.push(c.attr);
+      }
+    }
+
+    return new LineDistance(distance, clearLineOffsets, clearLineAttrs);
   }
+
+  /*
+   * find sets of rows where the rowhint implies they were all scrolled from
+   * the same offset, and figure out if that scroll is worth doing.
+   */
+  private checkForScroll() {
+    let run: ScrollRegion | undefined;
+    for (let y = 0; y < this.rows; y++) {
+      if (run) {
+        if (this.nextBuffer.rowhint[y] == y + run.offset) continue;
+        // end of a run.
+        run.y2 = y + run.offset;
+        console.log("consider", run, this.nextBuffer.rowhint);
+        run = undefined;
+      }
+      if (this.nextBuffer.rowhint[y] == y) continue;
+      run = new ScrollRegion(y, y, this.nextBuffer.rowhint[y] - y);
+    }
+    // there's no way a run can continue to the bottom of the screen.
+  }
+
+  private isWorthScrolling(region: ScrollRegion): boolean {
+    let unscrolled = 0;
+    // for ()
+    return false;
+  }
+
+  // how expensive is it to draw ydest, if ysource is the pre-draw line?
+  private computeUpdateCost(ydest: number, ysource: number): number {
+    let cost = 0;
+    for (let x = 0; x < this.cols; x++) {
+      if (!this.nextBuffer.isSame(x, ydest, this.currentBuffer, ysource)) cost++;
+    }
+    return cost;
+  }
+
+  // how expensive is it to draw ydest from a blank
 }
 
 class AttrScore {
@@ -243,7 +306,28 @@ class AttrScore {
     public attr: number,
     public bg: number,  // (attr >> 8) & 0xff, for convenience
     public x: number,
-    public score: number
+    public score: number = 0,  // how much better is it to do this clrtoeol vs without?
+    public chainScore: number = 0,  // same, but assuming a previous clrtoeol
+  ) {
+    // pass
+  }
+}
+
+class LineDistance {
+  constructor(
+    public distance: number,
+    public clearLineOffsets: number[],
+    public clearLineAttrs: number[]
+  ) {
+    // pass
+  }
+}
+
+class ScrollRegion {
+  constructor(
+    public y1: number,
+    public y2: number,
+    public offset: number,
   ) {
     // pass
   }
