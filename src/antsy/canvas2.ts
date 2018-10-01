@@ -8,6 +8,8 @@ const SPACE = 0x20;
 const MIN_TAB = 5;
 // during paint, if we see this many blanks in a row, check if clear-to-end-of-line would help
 const THRESHOLD_BLANKS = 8;
+// a good clear-to-eol must save at least 3 redraw cells (to compensate for [[K vs space).
+const CLEAR_STARTING_SCORE = -3;
 
 export class Canvas {
   // next: what we're drawing
@@ -98,9 +100,7 @@ export class Canvas {
       // everything, do that. update currentBuffer before calculating dirty
       // spans.
       const distance = this.computeRowDistance(y);
-      for (let i = 0; i < distance.clearLineAttrs.length; i++) {
-        this.currentBuffer.clearToEndOfLine(distance.clearLineOffsets[i], y, distance.clearLineAttrs[i]);
-      }
+      for (const c of distance.clears) this.currentBuffer.clearToEndOfLine(c.x, y, c.attr);
 
       this.getDirtySpans(y).forEach(([ left, right ]) => {
         // optimization: if the cursor is just before the dirty span, start from the cursor instead.
@@ -110,12 +110,10 @@ export class Canvas {
           left - this.currentBuffer.cursorX <= MIN_TAB
         ) left = this.currentBuffer.cursorX;
 
-        if (distance.clearLineOffsets.length > 0 && distance.clearLineOffsets[0] < left) {
-          const x = distance.clearLineOffsets[0];
-          const attr = distance.clearLineAttrs[0];
-          out += this.moveCurrent(x, y) + this.changeCurrentAttr(attr) + Terminal.eraseLine();
-          distance.clearLineOffsets.shift();
-          distance.clearLineAttrs.shift();
+        if (distance.clears.length > 0 && distance.clears[0].x < left) {
+          const c = distance.clears[0];
+          out += this.moveCurrent(c.x, y) + this.changeCurrentAttr(c.attr) + Terminal.eraseLine();
+          distance.clears.shift();
         }
         out += this.moveCurrent(left, y);
         for (let x = left; x < right; x++) {
@@ -128,12 +126,10 @@ export class Canvas {
       });
 
       // erase happened after all the dirty bits.
-      while (distance.clearLineOffsets.length > 0) {
-        const x = distance.clearLineOffsets[0];
-        const attr = distance.clearLineAttrs[0];
-        out += this.moveCurrent(x, y) + this.changeCurrentAttr(attr) + Terminal.eraseLine();
-        distance.clearLineOffsets.shift();
-        distance.clearLineAttrs.shift();
+      while (distance.clears.length > 0) {
+        const c = distance.clears[0];
+        out += this.moveCurrent(c.x, y) + this.changeCurrentAttr(c.attr) + Terminal.eraseLine();
+        distance.clears.shift();
       }
     }
 
@@ -191,11 +187,11 @@ export class Canvas {
     // difference between source & dist lines, in # of cells that have to be redrawn
     let distance = 0;
     // track the current run of blanks with the same background attr
-    let run: AttrScore | undefined;
+    let run: ClearPoint | undefined;
     // potential locations & attrs to do a clear-to-end-of-line (clrtoeol).
     // these are all "runs" of at least THRESHOLD_BLANKS spaces. score them
     // to see if they make things better or worse.
-    const candidates: AttrScore[] = [];
+    const candidates: ClearPoint[] = [];
 
     for (let x = 0; x < this.cols; x++) {
       const blankAttr = this.nextBuffer.isBlank(x, ydest);
@@ -222,7 +218,7 @@ export class Canvas {
           run = undefined;
         }
       } else {
-        run = new AttrScore(blankAttr, bg, x);
+        run = new ClearPoint(blankAttr, bg, x);
       }
 
       // blank: +1 to any chained candidate of this attr. -1 to any chained
@@ -245,22 +241,21 @@ export class Canvas {
       }
     }
 
-    // keep only the ones with a score at least 3 ([[K vs space).
-    let clearLineOffsets: number[] = [];
-    let clearLineAttrs: number[] = [];
-    while (candidates.length > 0 && candidates[0].score < 3) candidates.shift();
+    // keep only the ones with a positive score.
+    let clears: ClearPoint[] = [];
+    while (candidates.length > 0 && candidates[0].score <= 0) candidates.shift();
     if (candidates.length > 0) {
-      clearLineOffsets.push(candidates[0].x);
-      clearLineAttrs.push(candidates[0].attr);
+      clears.push(candidates[0]);
+      distance -= candidates[0].score;
       // filter the rest by their "chained" score, and ensure they change the bg color.
-      const rest = candidates.filter((c, i) => i == 0 || c.chainScore >= 3);
+      const rest = candidates.filter((c, i) => i == 0 || c.chainScore > 0);
       for (const c of rest.filter((c, i) => i > 0 && candidates[i - 1].bg != c.bg)) {
-        clearLineOffsets.push(c.x);
-        clearLineAttrs.push(c.attr);
+        clears.push(c);
+        distance -= c.chainScore;
       }
     }
 
-    return new LineDistance(distance, clearLineOffsets, clearLineAttrs);
+    return new LineDistance(distance, clears);
   }
 
   /*
@@ -301,23 +296,24 @@ export class Canvas {
   // how expensive is it to draw ydest from a blank
 }
 
-class AttrScore {
+// record of a horizontal place to perform a clear-to-eol, and a score of if it's worth it
+class ClearPoint {
   constructor(
     public attr: number,
     public bg: number,  // (attr >> 8) & 0xff, for convenience
     public x: number,
-    public score: number = 0,  // how much better is it to do this clrtoeol vs without?
-    public chainScore: number = 0,  // same, but assuming a previous clrtoeol
+    public score: number = CLEAR_STARTING_SCORE,  // how much better is it to do this clrtoeol vs without?
+    public chainScore: number = CLEAR_STARTING_SCORE,  // same, but assuming a previous clrtoeol
   ) {
     // pass
   }
 }
 
+// how different was this line, and where should you clear-to-eol to get that distance
 class LineDistance {
   constructor(
     public distance: number,
-    public clearLineOffsets: number[],
-    public clearLineAttrs: number[]
+    public clears: ClearPoint[],
   ) {
     // pass
   }
