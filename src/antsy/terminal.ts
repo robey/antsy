@@ -3,9 +3,26 @@
 const CSI = "\u001b[";
 
 export class Terminal {
+  static moveX(x: number): string {
+    if (x == 0) return "";
+    if (x > 0) {
+      return (x == 1) ? `${CSI}C` : `${CSI}${x}C`;
+    } else {
+      return (x == -1) ? `${CSI}D` : `${CSI}${-x}D`;
+    }
+  }
+
+  static moveY(y: number): string {
+    if (y == 0) return "";
+    if (y > 0) {
+      return (y == 1) ? `${CSI}B` : `${CSI}${y}B`;
+    } else {
+      return (y == -1) ? `${CSI}A` : `${CSI}${-y}A`;
+    }
+  }
+
   static moveRelative(x: number, y: number): string {
-    return (x == 0 ? "" : (x > 0 ? `${CSI}${x}C` : `${CSI}${-x}D`)) +
-      (y == 0 ? "" : (y > 0 ? `${CSI}${y}B` : `${CSI}${-y}A`));
+    return Terminal.moveX(x) + Terminal.moveY(y);
   }
 
   static move(x: number, y: number): string {
