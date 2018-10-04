@@ -5,6 +5,19 @@ const SPACE = 0x20;
 
 const MAX_HEIGHT = 32767;
 
+// maximum memory of vertical scroll events that happened between redraws
+const MAX_SCROLLS = 3;
+
+export class ScrollRegion {
+  constructor(
+    public top: number,
+    public bottom: number,
+    public rows: number,
+    public attr: number
+  ) {
+    // pass
+  }
+}
 
 export class TextBuffer {
   // unicode codepoint for each grid element (0 = blank)
@@ -14,10 +27,10 @@ export class TextBuffer {
 
   // mark rows that have been updated
   public dirty: Uint8Array;
-  // mark rows that are updated or copied
-  public rowhint: Uint16Array;
   // was "clear" called, and it's waiting to be painted?
   public pendingClear?: number;
+  // remember the last few vertical scrolls, in case they help optimize drawing
+  public pendingScrolls: ScrollRegion[] = [];
 
   // cursor location
   public cursorX: number;
@@ -30,7 +43,6 @@ export class TextBuffer {
     this.chars = new Uint32Array(rows * cols);
     this.attrs = new Uint16Array(rows * cols);
     this.dirty = new Uint8Array(Math.ceil(rows / 8));
-    this.rowhint = new Uint16Array(rows);
     this.cursorX = 0;
     this.cursorY = 0;
     this.attr = (BLACK << 8) | WHITE;
@@ -87,7 +99,6 @@ export class TextBuffer {
 
   copySegment(x1: number, x2: number, ydest: number, ysource: number) {
     this.setDirty(ydest);
-    this.rowhint[ydest] = this.rowhint[ysource];
     for (let x = x1; x < x2; x++) {
       this.attrs[this.cols * ydest + x] = this.attrs[this.cols * ysource + x];
       this.chars[this.cols * ydest + x] = this.chars[this.cols * ysource + x];
@@ -123,9 +134,14 @@ export class TextBuffer {
     return (this.dirty[Math.floor(y / 8)] & (1 << (y % 8))) != 0;
   }
 
+  addScroll(top: number, bottom: number, rows: number) {
+    this.pendingScrolls.push(new ScrollRegion(top, bottom, rows, this.attr));
+    while (this.pendingScrolls.length > MAX_SCROLLS) this.pendingScrolls.pop();
+  }
+
   clearDirty() {
     delete this.pendingClear;
-    for (let y = 0; y < this.rows; y++) this.rowhint[y] = y;
     for (let i = 0; i < this.dirty.length; i++) this.dirty[i] = 0;
+    while (this.pendingScrolls.length > 0) this.pendingScrolls.pop();
   }
 }
