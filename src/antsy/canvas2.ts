@@ -76,44 +76,7 @@ export class Canvas {
     return this;
   }
 
-
-  // ----- paint routines
-
   paint(): string {
     return computeDiff(this.currentBuffer, this.nextBuffer);
   }
-
-
-
-
-
-
-  // /*
-  //  * find sets of rows where the rowhint implies they were all scrolled from
-  //  * the same offset, and figure out if that scroll is worth doing.
-  //  */
-  // private checkForScroll() {
-  //   let run: ScrollRegion | undefined;
-  //   for (let y = 0; y < this.rows; y++) {
-  //     if (run) {
-  //       if (this.nextBuffer.rowhint[y] == y + run.offset) continue;
-  //       // end of a run.
-  //       const offset = run.offset;
-  //       run.y2 = y + offset;
-  //       console.log("consider", run, this.nextBuffer.rowhint);
-  //       const originalCost = range(run.y1, run.y2).reduce((sum, y) => {
-  //         return sum + this.computeRowDistance(y).distance;
-  //       }, 0);
-  //       const newCost = range(run.y1, y).reduce((sum, y) => {
-  //         return sum + this.computeRowDistance(y, y + offset).distance;
-  //       }, 0) + range(y, run.y2).reduce((sum, y) => sum + this.computeBlankDistance(y), 0);
-  //       console.log("cost", originalCost, newCost);
-  //       run = undefined;
-  //     }
-  //     if (this.nextBuffer.rowhint[y] == y) continue;
-  //     run = new ScrollRegion(y, y, this.nextBuffer.rowhint[y] - y);
-  //   }
-  //   // there's no way a run can continue to the bottom of the screen.
-  // }
-
 }
