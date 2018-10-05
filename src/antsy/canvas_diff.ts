@@ -1,12 +1,14 @@
-import { TextBuffer } from "./text_buffer";
+import { TextBuffer, ScrollRegion } from "./text_buffer";
 import { Terminal } from "./terminal";
 
-// during paint, if we see this many blanks in a row, check if clear-to-end-of-line would help
+// if we see this many blanks in a row, check if clear-to-end-of-line would help
 const THRESHOLD_BLANKS = 8;
 // a good clear-to-eol must save at least 3 redraw cells (to compensate for [[K vs space).
 const CLEAR_STARTING_SCORE = -3;
-// during paint, don't jump the cursor sideways unless it will move at least this far
+// don't jump the cursor sideways unless it will move at least this far
 const MIN_TAB = 5;
+// a vertical scroll must save us at least this many dirty cells to be useful
+const THRESHOLD_SCROLL = 6;
 
 // record of a horizontal place to perform a clear-to-eol, and a score of if it's worth it
 class ClearPoint {
@@ -47,7 +49,10 @@ export function computeDiff(oldBuffer: TextBuffer, newBuffer: TextBuffer): strin
     oldBuffer.clear();
   }
 
-  // this.checkForScroll();
+  // check if scrolling a vertical region would help
+  for (const s of newBuffer.pendingScrolls) {
+    out += checkScroll(oldBuffer, newBuffer, s);
+  }
 
   for (const y of range(0, oldBuffer.rows)) {
     if (!newBuffer.isDirty(y)) continue;
@@ -197,6 +202,46 @@ function getDirtySpans(oldBuffer: TextBuffer, newBuffer: TextBuffer, y: number):
   return spans;
 }
 
+function checkScroll(oldBuffer: TextBuffer, newBuffer: TextBuffer, s: ScrollRegion): string {
+  const originalCost = sum(range(s.top, s.bottom), y => computeRowDistance(oldBuffer, y, newBuffer).distance);
+  let newCost = 0;
+  if (s.rows > 0) {
+    newCost += sum(range(s.top, s.bottom - s.rows), y => {
+      return computeRowDistance(oldBuffer, y + s.rows, newBuffer, y).distance;
+    });
+    newCost += sum(range(s.bottom - s.rows, s.bottom), y => computeBlankDistance(newBuffer, y, s.attr));
+  } else {
+    const rows = -s.rows;
+    newCost += sum(range(s.top + rows, s.bottom), y => {
+      return computeRowDistance(oldBuffer, y - rows, newBuffer, y).distance;
+    });
+    newCost += sum(range(s.top, s.top + rows), y => computeBlankDistance(newBuffer, y, s.attr));
+  }
+
+  if (originalCost - newCost < THRESHOLD_SCROLL) return "";
+
+  let out = changeAttr(oldBuffer, s.attr);
+  if (s.rows > 0) {
+    out += Terminal.scrollUp(s.top, s.bottom, s.rows);
+    oldBuffer.scrollUp(0, s.top, oldBuffer.cols, s.bottom, s.rows);
+  } else {
+    out += Terminal.scrollDown(s.top, s.bottom, -s.rows);
+    oldBuffer.scrollDown(0, s.top, oldBuffer.cols, s.bottom, -s.rows);
+  }
+  // cursor is scrambled
+  oldBuffer.cursorX = -1;
+  oldBuffer.cursorY = -1;
+  return out;
+}
+
+// how expensive is it to draw ydest, if ysource is the pre-draw line?
+function computeBlankDistance(buffer: TextBuffer, y: number, blank: number): number {
+  return sum(range(0, buffer.cols), x => {
+    const attr = buffer.isBlank(x, y);
+    return (attr === undefined || (attr & 0xff00) != (blank & 0xff00)) ? 1 : 0;
+  });
+}
+
 // change a buffer's attr (fg & bg colors), and return the smallest code needed to do that.
 function changeAttr(buffer: TextBuffer, attr: number): string {
   // if the current attr is -1, force both fg & bg to be generated.
@@ -213,6 +258,7 @@ function move(buffer: TextBuffer, newX: number, newY: number): string {
   const oldX = buffer.cursorX, oldY = buffer.cursorY;
   buffer.cursorX = newX;
   buffer.cursorY = newY;
+  if (oldX < 0 || oldY < 0) return Terminal.move(newX, newY);
   if (oldX == newX && oldY == newY) return "";
   if (oldX == newX) return Terminal.moveRelative(0, newY - oldY);
   if (oldY == newY) return Terminal.moveRelative(newX - oldX, 0);
@@ -222,4 +268,8 @@ function move(buffer: TextBuffer, newX: number, newY: number): string {
 // *sings the song of my people*: "this should be in the stdlib"
 function range(start: number, end: number, step: number = 1): number[] {
   return [...Array(Math.ceil((end - start) / step)).keys()].map(i => i * step + start);
+}
+
+function sum<A>(list: A[], f: (item: A) => number): number {
+  return list.reduce((total, item) => total + f(item), 0);
 }

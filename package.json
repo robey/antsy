@@ -26,6 +26,7 @@
     "@types/node": "^10.10.3",
     "mocha": "^5.2.0",
     "should": "^13.2.3",
+    "source-map-support": "^0.5.9",
     "typescript": "^3.0.3"
   },
   "main": "./lib/antsy.js",

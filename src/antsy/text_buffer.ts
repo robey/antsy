@@ -98,11 +98,11 @@ export class TextBuffer {
   }
 
   copySegment(x1: number, x2: number, ydest: number, ysource: number) {
-    this.setDirty(ydest);
     for (let x = x1; x < x2; x++) {
       this.attrs[this.cols * ydest + x] = this.attrs[this.cols * ysource + x];
       this.chars[this.cols * ydest + x] = this.chars[this.cols * ysource + x];
     }
+    this.setDirty(ydest);
   }
 
   clearSegment(x1: number, x2: number, y: number) {
@@ -111,6 +111,7 @@ export class TextBuffer {
       this.attrs[start + i] = this.attr;
       this.chars[start + i] = SPACE;
     }
+    this.setDirty(y);
   }
 
   clearToEndOfLine(x: number, y: number, attr: number = this.attr) {
@@ -137,6 +138,26 @@ export class TextBuffer {
   addScroll(top: number, bottom: number, rows: number) {
     this.pendingScrolls.push(new ScrollRegion(top, bottom, rows, this.attr));
     while (this.pendingScrolls.length > MAX_SCROLLS) this.pendingScrolls.pop();
+  }
+
+  scrollUp(x1: number, y1: number, x2: number, y2: number, rows: number) {
+    for (let y = y1; y < y2 - rows; y++) {
+      this.copySegment(x1, x2, y, y + rows);
+    }
+    for (let y = y2 - rows; y < y2; y++) {
+      this.clearSegment(x1, x2, y);
+    }
+    this.addScroll(y1, y2, rows);
+  }
+
+  scrollDown(x1: number, y1: number, x2: number, y2: number, rows: number) {
+    for (let y = y2 - 1; y >= y1 + rows; y--) {
+      this.copySegment(x1, x2, y, y - rows);
+    }
+    for (let y = y1; y < y1 + rows; y++) {
+      this.clearSegment(x1, x2, y);
+    }
+    this.addScroll(y1, y2, -rows);
   }
 
   clearDirty() {

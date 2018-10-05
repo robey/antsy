@@ -1,6 +1,7 @@
 import { Canvas } from "../antsy/canvas2";
 
 import "should";
+import "source-map-support/register";
 
 const RESET_COLOR = "[[37m[[40m";
 const CLEAR = "[[2J[[H";
@@ -83,44 +84,50 @@ describe("Canvas", () => {
       c.at(0, 0).write("01234567890123456789012345678901234");
       escpaint(c).should.eql(`${RESET}01234567890123456789012345678901234`);
       c.at(0, 0).color(undefined, 2).clearToEndOfLine();
-      c.at(8, 0).color(undefined, 5).write("               ");
-      escpaint(c).should.eql("[[35D[[42m[[K[[8C[[45m[[K[[15C[[42m[[K");
+      c.at(8, 0).color(undefined, 5).write("                ");
+      escpaint(c).should.eql("[[35D[[42m[[K[[8C[[45m[[K[[16C[[42m[[K");
     });
   });
 
-  // describe("scrolls", () => {
-  //   function xyq() {
-  //     const c = new canvas.Canvas(5, 5);
-  //     c.color("green").clear();
-  //     c.at(2, 2).write("X");
-  //     c.at(3, 3).write("Y");
-  //     c.at(1, 1).write("Q");
-  //     return c;
-  //   }
+  describe("scrolls", () => {
+    function stars(): Canvas {
+      const c = new Canvas(7, 7);
+      c.at(0, 0).write("*******");
+      for (let y = 1; y < 6; y++) {
+        c.at(0, y).write("*");
+        c.at(6, y).write("*");
+      }
+      c.at(0, 6).write("*******");
+      c.at(1, 2).write("first");
+      c.at(1, 3).write("secnd");
+      c.at(1, 4).write("third");
+      escpaint(c).should.eql(`${RESET}*******[[2H*     *[[3H*first*[[4H*secnd*[[5H*third*[[6H*     *[[7H*******`);
+      return c;
+    }
 
-  //   it("up", () => {
-  //     const c = xyq();
-  //     c.scroll(0, 2);
-  //     c.toStrings().should.eql([
-  //       `${GREEN_ON_BLACK}  X  ${RESET}`,
-  //       `${GREEN_ON_BLACK}   Y ${RESET}`,
-  //       `${GREEN_ON_BLACK}     ${RESET}`,
-  //       `${BLACK_ON_BLACK}     ${RESET}`,
-  //       `${BLACK_ON_BLACK}     ${RESET}`
-  //     ]);
-  //   });
+    it("up", () => {
+      const c = stars();
+      c.scrollUp(0, 0, 7, 7, 2);
+      escpaint(c).should.eql("[[1;7r[[2S[[r");
+    });
 
-  //   it("down", () => {
-  //     const c = xyq();
-  //     c.scroll(0, -2);
-  //     c.toStrings().should.eql([
-  //       `${BLACK_ON_BLACK}     ${RESET}`,
-  //       `${BLACK_ON_BLACK}     ${RESET}`,
-  //       `${GREEN_ON_BLACK}     ${RESET}`,
-  //       `${GREEN_ON_BLACK} Q   ${RESET}`,
-  //       `${GREEN_ON_BLACK}  X  ${RESET}`
-  //     ]);
-  //   });
+    it("up region", () => {
+      const c = stars();
+      c.scrollUp(1, 1, 6, 6, 2);
+      escpaint(c).should.eql("[[2;6r[[2S[[r[[5H*     *[[6H*     *");
+    });
+
+    it("down", () => {
+      const c = stars();
+      c.scrollDown(0, 0, 7, 7, 2);
+      escpaint(c).should.eql("[[1;7r[[2T[[r");
+    });
+
+    it("down region", () => {
+      const c = stars();
+      c.scrollDown(1, 1, 6, 6, 2);
+      escpaint(c).should.eql("[[2;6r[[2T[[r[[2H*     *[[3H*     *");
+    });
 
   //   it("left", () => {
   //     const c = xyq();
@@ -157,5 +164,5 @@ describe("Canvas", () => {
   //       `${BLACK_ON_BLACK}     ${RESET}`
   //     ]);
   //   });
-  // });
+  });
 });

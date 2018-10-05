@@ -66,14 +66,13 @@ export class Canvas {
     return this;
   }
 
-  scrollUp(x1: number, y1: number, x2: number, y2: number, n: number): this {
-    for (let y = y1; y < y2 - n; y++) {
-      this.nextBuffer.copySegment(x1, x2, y, y + n);
-    }
-    for (let y = y2 - n; y < y2; y++) {
-      this.nextBuffer.clearSegment(x1, x2, y);
-    }
-    this.nextBuffer.addScroll(y1, y2, n);
+  scrollUp(x1: number, y1: number, x2: number, y2: number, rows: number): this {
+    this.nextBuffer.scrollUp(x1, y1, x2, y2, rows);
+    return this;
+  }
+
+  scrollDown(x1: number, y1: number, x2: number, y2: number, rows: number): this {
+    this.nextBuffer.scrollDown(x1, y1, x2, y2, rows);
     return this;
   }
 
@@ -115,24 +114,6 @@ export class Canvas {
   //     run = new ScrollRegion(y, y, this.nextBuffer.rowhint[y] - y);
   //   }
   //   // there's no way a run can continue to the bottom of the screen.
-  // }
-
-  // private isWorthScrolling(region: ScrollRegion): boolean {
-  //   let unscrolled = 0;
-  //   // for ()
-  //   return false;
-  // }
-
-  // // how expensive is it to draw ydest, if ysource is the pre-draw line?
-  // // FIXME: figure out what the best blank would be
-  // private computeBlankDistance(y: number): number {
-  //   let cost = 0;
-  //   for (let x = 0; x < this.cols; x++) {
-  //     const attr = this.nextBuffer.isBlank(x, y);
-  //     if (attr === undefined || (attr & 0xff00) != (this.currentBuffer.attr & 0xff)) cost++;
-  //   }
-  //   console.log("blank cost", cost);
-  //   return cost;
   // }
 
 }
