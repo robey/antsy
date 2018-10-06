@@ -129,40 +129,28 @@ describe("Canvas", () => {
       escpaint(c).should.eql("[[2;6r[[2T[[r[[2H*     *[[3H*     *");
     });
 
-  //   it("left", () => {
-  //     const c = xyq();
-  //     c.scroll(2, 0);
-  //     c.toStrings().should.eql([
-  //       `${GREEN_ON_BLACK}   ${SET_FG_BLACK}  ${RESET}`,
-  //       `${GREEN_ON_BLACK}   ${SET_FG_BLACK}  ${RESET}`,
-  //       `${GREEN_ON_BLACK}X  ${SET_FG_BLACK}  ${RESET}`,
-  //       `${GREEN_ON_BLACK} Y ${SET_FG_BLACK}  ${RESET}`,
-  //       `${GREEN_ON_BLACK}   ${SET_FG_BLACK}  ${RESET}`
-  //     ]);
-  //   });
+    it("left", () => {
+      const c = stars();
+      c.scrollLeft(0, 0, 7, 7, 2);
+      escpaint(c).should.eql("[[1;6H  [[2H    *  [[3Hirst*  [[4Hecnd*  [[5Hhird*  [[6H    *  [[7;6H  ");
+    });
 
-  //   it("right", () => {
-  //     const c = xyq();
-  //     c.scroll(-2, 0);
-  //     c.toStrings().should.eql([
-  //       `${BLACK_ON_BLACK}  ${SET_FG_GREEN}   ${RESET}`,
-  //       `${BLACK_ON_BLACK}  ${SET_FG_GREEN} Q ${RESET}`,
-  //       `${BLACK_ON_BLACK}  ${SET_FG_GREEN}  X${RESET}`,
-  //       `${BLACK_ON_BLACK}  ${SET_FG_GREEN}   ${RESET}`,
-  //       `${BLACK_ON_BLACK}  ${SET_FG_GREEN}   ${RESET}`
-  //     ]);
-  //   });
+    it("left region", () => {
+      const c = stars();
+      c.scrollLeft(1, 1, 6, 6, 2);
+      escpaint(c).should.eql("[[3;2Hrst  [[4;2Hcnd  [[5;2Hird  ");
+    });
 
-  //   it("up and right", () => {
-  //     const c = xyq();
-  //     c.scroll(-1, 1);
-  //     c.toStrings().should.eql([
-  //       `${BLACK_ON_BLACK} ${SET_FG_GREEN} Q  ${RESET}`,
-  //       `${BLACK_ON_BLACK} ${SET_FG_GREEN}  X ${RESET}`,
-  //       `${BLACK_ON_BLACK} ${SET_FG_GREEN}   Y${RESET}`,
-  //       `${BLACK_ON_BLACK} ${SET_FG_GREEN}    ${RESET}`,
-  //       `${BLACK_ON_BLACK}     ${RESET}`
-  //     ]);
-  //   });
+    it("right", () => {
+      const c = stars();
+      c.scrollRight(0, 0, 7, 7, 2);
+      escpaint(c).should.eql("[[H  [[2H  *    [[3H  *firs[[4H  *secn[[5H  *thir[[6H  *    [[7H  ");
+    });
+
+    it("right region", () => {
+      const c = stars();
+      c.scrollRight(1, 1, 6, 6, 2);
+      escpaint(c).should.eql("[[3;2H  fir[[4;2H  sec[[5;2H  thi");
+    });
   });
 });

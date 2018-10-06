@@ -97,10 +97,17 @@ export class TextBuffer {
     return this.attrs[i] == other.attrs[oi];
   }
 
-  copySegment(x1: number, x2: number, ydest: number, ysource: number) {
-    for (let x = x1; x < x2; x++) {
-      this.attrs[this.cols * ydest + x] = this.attrs[this.cols * ysource + x];
-      this.chars[this.cols * ydest + x] = this.chars[this.cols * ysource + x];
+  copySegment(xdest: number, ydest: number, xsource: number, ysource: number, count: number) {
+    for (let i = 0; i < count; i++) {
+      let dest = this.cols * ydest + xdest;
+      let source = this.cols * ysource + xsource;
+      if (xdest <= xsource) {
+        this.attrs[dest + i] = this.attrs[source + i];
+        this.chars[dest + i] = this.chars[source + i];
+      } else {
+        this.attrs[dest + count - i - 1] = this.attrs[source + count - i - 1];
+        this.chars[dest + count - i - 1] = this.chars[source + count - i - 1];
+      }
     }
     this.setDirty(ydest);
   }
@@ -142,7 +149,7 @@ export class TextBuffer {
 
   scrollUp(x1: number, y1: number, x2: number, y2: number, rows: number) {
     for (let y = y1; y < y2 - rows; y++) {
-      this.copySegment(x1, x2, y, y + rows);
+      this.copySegment(x1, y, x1, y + rows, x2 - x1);
     }
     for (let y = y2 - rows; y < y2; y++) {
       this.clearSegment(x1, x2, y);
@@ -152,12 +159,26 @@ export class TextBuffer {
 
   scrollDown(x1: number, y1: number, x2: number, y2: number, rows: number) {
     for (let y = y2 - 1; y >= y1 + rows; y--) {
-      this.copySegment(x1, x2, y, y - rows);
+      this.copySegment(x1, y, x1, y - rows, x2 - x1);
     }
     for (let y = y1; y < y1 + rows; y++) {
       this.clearSegment(x1, x2, y);
     }
     this.addScroll(y1, y2, -rows);
+  }
+
+  scrollLeft(x1: number, y1: number, x2: number, y2: number, cols: number) {
+    for (let y = y1; y < y2; y++) {
+      this.copySegment(x1, y, x1 + cols, y, x2 - x1 - cols);
+      this.clearSegment(x2 - cols, x2, y);
+    }
+  }
+
+  scrollRight(x1: number, y1: number, x2: number, y2: number, cols: number) {
+    for (let y = y1; y < y2; y++) {
+      this.copySegment(x1 + cols, y, x1, y, x2 - x1 - cols);
+      this.clearSegment(x1, x1 + cols, y);
+    }
   }
 
   clearDirty() {

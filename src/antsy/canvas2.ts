@@ -76,6 +76,16 @@ export class Canvas {
     return this;
   }
 
+  scrollLeft(x1: number, y1: number, x2: number, y2: number, cols: number): this {
+    this.nextBuffer.scrollLeft(x1, y1, x2, y2, cols);
+    return this;
+  }
+
+  scrollRight(x1: number, y1: number, x2: number, y2: number, cols: number): this {
+    this.nextBuffer.scrollRight(x1, y1, x2, y2, cols);
+    return this;
+  }
+
   paint(): string {
     return computeDiff(this.currentBuffer, this.nextBuffer);
   }
