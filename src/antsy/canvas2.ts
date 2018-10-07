@@ -1,5 +1,4 @@
 import { computeDiff } from "./canvas_diff";
-import { Terminal } from "./terminal";
 import { TextBuffer } from "./text_buffer";
 import * as xterm256 from "./xterm256";
 
@@ -45,6 +44,11 @@ export class Canvas {
 
   write(s: string): this {
     for (let i = 0; i < s.length; i++) {
+      // check for auto-scroll, only when we need to write another glyph
+      if (this.nextBuffer.cursorY >= this.rows) {
+        this.scrollUp(0, 0, this.cols, this.rows, 1);
+        this.nextBuffer.cursorY = this.rows;
+      }
       const ch = s.codePointAt(i) || SPACE;
       if (ch > 0xffff) i++;
       this.nextBuffer.put(this.nextBuffer.cursorX, this.nextBuffer.cursorY, this.nextBuffer.attr, ch);
@@ -52,10 +56,6 @@ export class Canvas {
       if (this.nextBuffer.cursorX >= this.cols) {
         this.nextBuffer.cursorX = 0;
         this.nextBuffer.cursorY++;
-        if (this.nextBuffer.cursorY >= this.rows) {
-          // FIXME
-          this.nextBuffer.cursorY = 0;
-        }
       }
     }
     return this;

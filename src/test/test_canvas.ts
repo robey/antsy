@@ -152,5 +152,13 @@ describe("Canvas", () => {
       c.scrollRight(1, 1, 6, 6, 2);
       escpaint(c).should.eql("[[3;2H  fir[[4;2H  sec[[5;2H  thi");
     });
+
+    it("on overflow", () => {
+      const c = new Canvas(5, 3);
+      c.at(0, 2).write("hi");
+      escpaint(c).should.eql(`${RESET}[[2Bhi`);
+      c.write("tops");
+      escpaint(c).should.eql("[[2Hhitop[[3Hs ");
+    });
   });
 });
