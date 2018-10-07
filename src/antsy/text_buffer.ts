@@ -147,38 +147,35 @@ export class TextBuffer {
     while (this.pendingScrolls.length > MAX_SCROLLS) this.pendingScrolls.pop();
   }
 
+  // move a box bounded by (x1, y1) and (x2, y2) up/down/left/right
+  copyBox(x1: number, y1: number, x2: number, y2: number, cols: number, rows: number) {
+    for (let v = 0; v < y2 - y1; v++) {
+      let ydest = rows > 0 ? y2 + rows - v - 1 : y1 + rows + v;
+      let ysource = rows > 0 ? y2 - v - 1 : y1 + v;
+      this.copySegment(x1 + cols, ydest, x1, ysource, x2 - x1);
+    }
+  }
+
   scrollUp(x1: number, y1: number, x2: number, y2: number, rows: number) {
-    for (let y = y1; y < y2 - rows; y++) {
-      this.copySegment(x1, y, x1, y + rows, x2 - x1);
-    }
-    for (let y = y2 - rows; y < y2; y++) {
-      this.clearSegment(x1, x2, y);
-    }
+    this.copyBox(x1, y1 + rows, x2, y2, 0, -rows);
+    for (let y = y2 - rows; y < y2; y++) this.clearSegment(x1, x2, y);
     this.addScroll(y1, y2, rows);
   }
 
   scrollDown(x1: number, y1: number, x2: number, y2: number, rows: number) {
-    for (let y = y2 - 1; y >= y1 + rows; y--) {
-      this.copySegment(x1, y, x1, y - rows, x2 - x1);
-    }
-    for (let y = y1; y < y1 + rows; y++) {
-      this.clearSegment(x1, x2, y);
-    }
+    this.copyBox(x1, y1, x2, y2 - rows, 0, rows);
+    for (let y = y1; y < y1 + rows; y++) this.clearSegment(x1, x2, y);
     this.addScroll(y1, y2, -rows);
   }
 
   scrollLeft(x1: number, y1: number, x2: number, y2: number, cols: number) {
-    for (let y = y1; y < y2; y++) {
-      this.copySegment(x1, y, x1 + cols, y, x2 - x1 - cols);
-      this.clearSegment(x2 - cols, x2, y);
-    }
+    this.copyBox(x1 + cols, y1, x2, y2, -cols, 0);
+    for (let y = y1; y < y2; y++) this.clearSegment(x2 - cols, x2, y);
   }
 
   scrollRight(x1: number, y1: number, x2: number, y2: number, cols: number) {
-    for (let y = y1; y < y2; y++) {
-      this.copySegment(x1 + cols, y, x1, y, x2 - x1 - cols);
-      this.clearSegment(x1, x1 + cols, y);
-    }
+    this.copyBox(x1, y1, x2 - cols, y2, cols, 0);
+    for (let y = y1; y < y2; y++) this.clearSegment(x1, x1 + cols, y);
   }
 
   clearDirty() {
