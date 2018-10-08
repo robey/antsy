@@ -12,14 +12,12 @@ export class Canvas {
   // next: what we're drawing
   nextBuffer: TextBuffer;
   // current: what's currently on the screen
-  currentBuffer: TextBuffer;
+  currentBuffer?: TextBuffer;
 
   constructor(public cols: number, public rows: number) {
     this.nextBuffer = new TextBuffer(cols, rows);
     this.currentBuffer = new TextBuffer(cols, rows);
     this.nextBuffer.clearBox(0, 0, cols, rows, (BLACK << 8) | WHITE);
-    this.currentBuffer.set(this.nextBuffer);
-    this.currentBuffer.attr = -1;
   }
 
   all(): Region {
@@ -44,6 +42,8 @@ export class Canvas {
   }
 
   paint(): string {
+    // don't create currentBuffer unless they actually call paint
+    if (this.currentBuffer === undefined) this.currentBuffer = new TextBuffer(this.cols, this.rows);
     return computeDiff(this.currentBuffer, this.nextBuffer);
   }
 }

@@ -1,6 +1,3 @@
-const WHITE = 7; // xterm256.get_color("gray");
-const BLACK = 0; // xterm256.get_color("black");
-
 const SPACE = 0x20;
 
 const MAX_HEIGHT = 32767;
@@ -45,7 +42,7 @@ export class TextBuffer {
     this.dirty = new Uint8Array(Math.ceil(rows / 8));
     this.cursorX = 0;
     this.cursorY = 0;
-    this.attr = (BLACK << 8) | WHITE;
+    this.attr = -1;
   }
 
   put(x: number, y: number, attr: number, char: number) {
