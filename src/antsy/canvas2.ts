@@ -76,7 +76,11 @@ export class Region {
   }
 
   all(): Region {
-    return this;
+    const r = new Region(this.canvas, 0, 0, this.canvas.cols, this.canvas.rows);
+    r.cursorX = this.cursorX + this.x1;
+    r.cursorY = this.cursorY + this.y1;
+    r.attr = this.attr;
+    return r;
   }
 
   clip(x1: number, y1: number, x2: number, y2: number): Region {
@@ -132,7 +136,7 @@ export class Region {
 
       const n = this.cols - this.cursorX;
       const text = s.slice(0, n);
-      this.canvas.write(this.cursorX, this.cursorY, this.attr, text);
+      this.canvas.write(this.x1 + this.cursorX, this.y1 + this.cursorY, this.attr, text);
       this.cursorX += text.length;
       s = s.slice(n);
     }
