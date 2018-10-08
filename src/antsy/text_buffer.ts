@@ -112,26 +112,17 @@ export class TextBuffer {
     this.setDirty(ydest);
   }
 
-  clearSegment(x1: number, x2: number, y: number) {
+  clearSegment(x1: number, x2: number, y: number, attr: number) {
     const start = this.cols * y + x1;
     for (let i = 0; i < x2 - x1; i++) {
-      this.attrs[start + i] = this.attr;
+      this.attrs[start + i] = attr;
       this.chars[start + i] = SPACE;
     }
     this.setDirty(y);
   }
 
-  clearToEndOfLine(x: number, y: number, attr: number = this.attr) {
+  clearToEndOfLine(x: number, y: number, attr: number) {
     for (; x < this.cols; x++) this.put(x, y, attr, SPACE);
-  }
-
-  clear() {
-    for (let y = 0; y < this.rows; y++) this.clearSegment(0, this.cols, y);
-    // remember that we cleared the screen, and forget all dirty row hints
-    this.clearDirty();
-    this.pendingClear = this.attr;
-    this.cursorX = 0;
-    this.cursorY = 0;
   }
 
   setDirty(y: number) {
@@ -140,11 +131,6 @@ export class TextBuffer {
 
   isDirty(y: number): boolean {
     return (this.dirty[Math.floor(y / 8)] & (1 << (y % 8))) != 0;
-  }
-
-  addScroll(top: number, bottom: number, rows: number) {
-    this.pendingScrolls.push(new ScrollRegion(top, bottom, rows, this.attr));
-    while (this.pendingScrolls.length > MAX_SCROLLS) this.pendingScrolls.pop();
   }
 
   // move a box bounded by (x1, y1) and (x2, y2) up/down/left/right
@@ -156,26 +142,41 @@ export class TextBuffer {
     }
   }
 
-  scrollUp(x1: number, y1: number, x2: number, y2: number, rows: number) {
+  clearBox(x1: number, y1: number, x2: number, y2: number, attr: number) {
+    for (let y = y1; y < y2; y++) this.clearSegment(x1, x2, y, attr);
+    if (x1 == 0 && x2 == this.cols && y1 == 0 && y2 == this.rows) {
+      // cleared the whole screen. memoize that.
+      this.clearDirty();
+      this.pendingClear = attr;
+      this.cursorX = 0;
+      this.cursorY = 0;
+    }
+  }
+
+  scrollUp(x1: number, y1: number, x2: number, y2: number, rows: number, attr: number) {
     this.copyBox(x1, y1 + rows, x2, y2, 0, -rows);
-    for (let y = y2 - rows; y < y2; y++) this.clearSegment(x1, x2, y);
-    this.addScroll(y1, y2, rows);
+    for (let y = y2 - rows; y < y2; y++) this.clearSegment(x1, x2, y, attr);
+
+    this.pendingScrolls.push(new ScrollRegion(y1, y2, rows, attr));
+    while (this.pendingScrolls.length > MAX_SCROLLS) this.pendingScrolls.pop();
   }
 
-  scrollDown(x1: number, y1: number, x2: number, y2: number, rows: number) {
+  scrollDown(x1: number, y1: number, x2: number, y2: number, rows: number, attr: number) {
     this.copyBox(x1, y1, x2, y2 - rows, 0, rows);
-    for (let y = y1; y < y1 + rows; y++) this.clearSegment(x1, x2, y);
-    this.addScroll(y1, y2, -rows);
+    for (let y = y1; y < y1 + rows; y++) this.clearSegment(x1, x2, y, attr);
+
+    this.pendingScrolls.push(new ScrollRegion(y1, y2, -rows, attr));
+    while (this.pendingScrolls.length > MAX_SCROLLS) this.pendingScrolls.pop();
   }
 
-  scrollLeft(x1: number, y1: number, x2: number, y2: number, cols: number) {
+  scrollLeft(x1: number, y1: number, x2: number, y2: number, cols: number, attr: number) {
     this.copyBox(x1 + cols, y1, x2, y2, -cols, 0);
-    for (let y = y1; y < y2; y++) this.clearSegment(x2 - cols, x2, y);
+    for (let y = y1; y < y2; y++) this.clearSegment(x2 - cols, x2, y, attr);
   }
 
-  scrollRight(x1: number, y1: number, x2: number, y2: number, cols: number) {
+  scrollRight(x1: number, y1: number, x2: number, y2: number, cols: number, attr: number) {
     this.copyBox(x1, y1, x2 - cols, y2, cols, 0);
-    for (let y = y1; y < y2; y++) this.clearSegment(x1, x1 + cols, y);
+    for (let y = y1; y < y2; y++) this.clearSegment(x1, x1 + cols, y, attr);
   }
 
   clearDirty() {

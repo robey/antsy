@@ -46,7 +46,7 @@ export function computeDiff(oldBuffer: TextBuffer, newBuffer: TextBuffer): strin
   let out = "";
   if (newBuffer.pendingClear) {
     out += changeAttr(oldBuffer, newBuffer.pendingClear) + Terminal.clearScreen();
-    oldBuffer.clear();
+    oldBuffer.clearBox(0, 0, oldBuffer.cols, oldBuffer.rows, newBuffer.pendingClear);
   }
 
   // check if scrolling a vertical region would help
@@ -223,10 +223,10 @@ function checkScroll(oldBuffer: TextBuffer, newBuffer: TextBuffer, s: ScrollRegi
   let out = changeAttr(oldBuffer, s.attr);
   if (s.rows > 0) {
     out += Terminal.scrollUp(s.top, s.bottom, s.rows);
-    oldBuffer.scrollUp(0, s.top, oldBuffer.cols, s.bottom, s.rows);
+    oldBuffer.scrollUp(0, s.top, oldBuffer.cols, s.bottom, s.rows, oldBuffer.attr);
   } else {
     out += Terminal.scrollDown(s.top, s.bottom, -s.rows);
-    oldBuffer.scrollDown(0, s.top, oldBuffer.cols, s.bottom, -s.rows);
+    oldBuffer.scrollDown(0, s.top, oldBuffer.cols, s.bottom, -s.rows, oldBuffer.attr);
   }
   // cursor is scrambled
   oldBuffer.cursorX = -1;
