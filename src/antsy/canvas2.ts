@@ -67,6 +67,14 @@ export class Region {
     this.attr = (BLACK << 8) | WHITE;
   }
 
+  get cols(): number {
+    return this.x2 - this.x1;
+  }
+
+  get rows(): number {
+    return this.y2 - this.y1;
+  }
+
   all(): Region {
     return this;
   }
@@ -76,7 +84,11 @@ export class Region {
     x2 = Math.max(this.x1, Math.min(x2, this.x2));
     y1 = Math.max(this.y1, Math.min(y1, this.y2));
     y2 = Math.max(this.y1, Math.min(y2, this.y2));
-    return new Region(this.canvas, x1, y1, x2, y2);
+    const r = new Region(this.canvas, x1, y1, x2, y2);
+    r.cursorX = this.cursorX;
+    r.cursorY = this.cursorY;
+    r.attr = this.attr;
+    return r;
   }
 
   color(fg?: string | number, bg?: string | number): this {
@@ -91,9 +103,13 @@ export class Region {
     return this;
   }
 
+  backgroundColor(bg: string | number): this {
+    return this.color(undefined, bg);
+  }
+
   at(x: number, y: number): this {
-    this.cursorX = Math.max(Math.min(x, this.x2 - this.x1), 0);
-    this.cursorY = Math.max(Math.min(y, this.y2 - this.y1), 0);
+    this.cursorX = Math.max(Math.min(x, this.cols), 0);
+    this.cursorY = Math.max(Math.min(y, this.rows), 0);
     return this;
   }
 
@@ -105,27 +121,22 @@ export class Region {
   write(s: string): this {
     while (s.length > 0) {
       // check for auto-scroll, only when we need to write another glyph
-      if (this.cursorX >= this.x2 - this.x1) {
+      if (this.cursorX >= this.cols) {
         this.cursorX = 0;
         this.cursorY++;
-        if (this.cursorY >= this.y2 - this.y1) {
+        if (this.cursorY >= this.rows) {
           this.scrollUp();
-          this.cursorY = this.y2 - this.y1 - 1;
+          this.cursorY = this.rows - 1;
         }
       }
 
-      const n = this.x2 - this.x1 - this.cursorX;
+      const n = this.cols - this.cursorX;
       const text = s.slice(0, n);
       this.canvas.write(this.cursorX, this.cursorY, this.attr, text);
       this.cursorX += text.length;
       s = s.slice(n);
     }
 
-    return this;
-  }
-
-  clearToEndOfLine(): this {
-    this.canvas.nextBuffer.clearToEndOfLine(this.cursorX, this.cursorY, this.attr);
     return this;
   }
 
