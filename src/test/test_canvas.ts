@@ -110,6 +110,36 @@ describe("Canvas", () => {
     escpaint(c).should.eql("[[4;4H      [[5;4H      [[6;4H      [[7;4H      ");
   });
 
+  it("writes canvas into each other", () => {
+    // make a background and a box, and draw them into the main canvas to simulate animation.
+    const c = new Canvas(10, 10);
+    const bg = new Canvas(10, 10);
+    const box = new Canvas(4, 4);
+    bg.all().backgroundColor("navy").clear();
+    box.all().backgroundColor("maroon").clear().at(0, 0).color("white").write("+--+|  ||  |+--+");
+
+    c.all().draw(bg.all());
+    c.clip(3, 3, 10, 10).draw(box.all());
+    escpaint(c).should.eql(
+      `${RESET}[[44m[[K[[B[[K[[B[[K[[B` +
+      `   [[38;5;15m[[41m+--+[[37m[[44m   ` +
+      `[[5H   [[38;5;15m[[41m|  |[[37m[[44m   ` +
+      `[[6H   [[38;5;15m[[41m|  |[[37m[[44m   ` +
+      `[[7H   [[38;5;15m[[41m+--+[[37m[[44m   ` +
+      `[[8H[[K[[B[[K[[B[[K`
+    );
+
+    // move the box one place over, but "redraw" everything
+    c.all().draw(bg.all());
+    c.clip(4, 4, 10, 10).draw(box.all());
+    escpaint(c).should.eql(
+      `[[6A[[K` +
+      `[[5;4H [[38;5;15m[[41m+--+` +
+      `[[6;4H[[37m[[44m [[38;5;15m[[41m|  |` +
+      `[[7;4H[[37m[[44m [[38;5;15m[[41m|  |` +
+      `[[8;5H+--+`
+    );
+  });
 
   describe("scrolls", () => {
     function stars(): Canvas {

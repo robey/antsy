@@ -84,10 +84,10 @@ export class Region {
   }
 
   clip(x1: number, y1: number, x2: number, y2: number): Region {
-    x1 = Math.max(this.x1, Math.min(x1, this.x2));
-    x2 = Math.max(this.x1, Math.min(x2, this.x2));
-    y1 = Math.max(this.y1, Math.min(y1, this.y2));
-    y2 = Math.max(this.y1, Math.min(y2, this.y2));
+    x1 = Math.max(this.x1, Math.min(this.x1 + x1, this.x2));
+    x2 = Math.max(this.x1, Math.min(this.x1 + x2, this.x2));
+    y1 = Math.max(this.y1, Math.min(this.y1 + y1, this.y2));
+    y2 = Math.max(this.y1, Math.min(this.y1 + y2, this.y2));
     const r = new Region(this.canvas, x1, y1, x2, y2);
     r.cursorX = this.cursorX;
     r.cursorY = this.cursorY;
@@ -141,6 +141,13 @@ export class Region {
       s = s.slice(n);
     }
 
+    return this;
+  }
+
+  draw(other: Region): this {
+    const maxx = this.cols - this.cursorX, maxy = this.rows - this.cursorY;
+    if (other.cols > maxx || other.rows > maxy) other = other.clip(0, 0, maxx, maxy);
+    this.canvas.nextBuffer.putBox(this.x1, this.y1, other.canvas.nextBuffer, other.x1, other.y1, other.x2, other.y2);
     return this;
   }
 

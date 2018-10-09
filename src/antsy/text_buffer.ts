@@ -139,6 +139,19 @@ export class TextBuffer {
     }
   }
 
+  // draw another TextBuffer into myself.
+  putBox(x1: number, y1: number, other: TextBuffer, ox1: number, oy1: number, ox2: number, oy2: number) {
+    let offset = this.cols * y1 + x1;
+    let otherOffset = other.cols * oy1 + ox1;
+    for (let v = 0; v < oy2 - oy1; v++) {
+      this.attrs.set(other.attrs.slice(otherOffset, otherOffset + ox2 - ox1), offset);
+      this.chars.set(other.chars.slice(otherOffset, otherOffset + ox2 - ox1), offset);
+      this.setDirty(y1 + v);
+      offset += this.cols;
+      otherOffset += other.cols;
+    }
+  }
+
   clearBox(x1: number, y1: number, x2: number, y2: number, attr: number) {
     for (let y = y1; y < y2; y++) this.clearSegment(x1, x2, y, attr);
     if (x1 == 0 && x2 == this.cols && y1 == 0 && y2 == this.rows) {
