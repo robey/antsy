@@ -1,175 +1,173 @@
+import { computeDiff } from "./canvas_diff";
+import { TextBuffer } from "./text_buffer";
 import * as xterm256 from "./xterm256";
 
-const SPACE = " ".charCodeAt(0);
+const WHITE = 7; // xterm256.get_color("gray");
+const BLACK = 0; // xterm256.get_color("black");
 
-const UNDERLINE_START = "\u001b[4m";
-const UNDERLINE_STOP = "\u001b[24m";
-export const RESET_ATTRIBUTES = "\u001b[0m";
+const SPACE = 0x20;
 
-function fgString(index: number): string { return `\u001b[38;5;${index}m`; }
-function bgString(index: number): string { return `\u001b[48;5;${index}m`; }
-
-export const TRANSPARENT = -1;
-const WHITE = xterm256.get_color("white");
-const BLACK = xterm256.get_color("black");
 
 export class Canvas {
-  private grid: number[];
-  private x: number;
-  private y: number;
-  private fg: number;
-  private bg: number;
+  // next: what we're drawing
+  nextBuffer: TextBuffer;
+  // current: what's currently on the screen
+  currentBuffer?: TextBuffer;
 
-  constructor(public width: number, public height: number) {
-    // (y, x) indexed, with each entry: BBFFCCCCC
-    // (B = bg color, F = fg color, C = 20-bit unichar)
-    this.grid = new Array(this.width * this.height);
-    this.fg = WHITE;
-    this.bg = BLACK;
-    this.clear();
-    this.y = 0;
-    this.x = 0;
+  constructor(public cols: number, public rows: number) {
+    this.nextBuffer = new TextBuffer(cols, rows);
+    this.currentBuffer = new TextBuffer(cols, rows);
+    this.nextBuffer.clearBox(0, 0, cols, rows, (BLACK << 8) | WHITE);
   }
 
-  color(c: string | number): this {
-    this.fg = typeof c === "string" ? xterm256.get_color(c) : c;
+  all(): Region {
+    return new Region(this, 0, 0, this.cols, this.rows);
+  }
+
+  clip(x1: number, y1: number, x2: number, y2: number): Region {
+    x1 = Math.max(0, Math.min(x1, this.cols));
+    x2 = Math.max(0, Math.min(x2, this.cols));
+    y1 = Math.max(0, Math.min(y1, this.rows));
+    y2 = Math.max(0, Math.min(y2, this.rows));
+    return new Region(this, Math.max(x1, 0), y1, x2, y2);
+  }
+
+  write(x: number, y: number, attr: number, s: string) {
+    for (let i = 0; i < s.length; i++) {
+      const ch = s.codePointAt(i) || SPACE;
+      if (ch > 0xffff) i++;
+      this.nextBuffer.put(x++, y, attr, ch);
+      if (x >= this.cols || y >= this.rows) return;
+    }
+  }
+
+  paint(): string {
+    // don't create currentBuffer unless they actually call paint
+    if (this.currentBuffer === undefined) this.currentBuffer = new TextBuffer(this.cols, this.rows);
+    return computeDiff(this.currentBuffer, this.nextBuffer);
+  }
+}
+
+
+// Clipped region of a canvas
+export class Region {
+  public cursorX: number;
+  public cursorY: number;
+  public attr: number;
+
+  constructor(
+    public canvas: Canvas,
+    public x1: number,
+    public y1: number,
+    public x2: number,
+    public y2: number
+  ) {
+    this.cursorX = 0;
+    this.cursorY = 0;
+    this.attr = (BLACK << 8) | WHITE;
+  }
+
+  get cols(): number {
+    return this.x2 - this.x1;
+  }
+
+  get rows(): number {
+    return this.y2 - this.y1;
+  }
+
+  all(): Region {
+    const r = new Region(this.canvas, 0, 0, this.canvas.cols, this.canvas.rows);
+    r.cursorX = this.cursorX + this.x1;
+    r.cursorY = this.cursorY + this.y1;
+    r.attr = this.attr;
+    return r;
+  }
+
+  clip(x1: number, y1: number, x2: number, y2: number): Region {
+    x1 = Math.max(this.x1, Math.min(this.x1 + x1, this.x2));
+    x2 = Math.max(this.x1, Math.min(this.x1 + x2, this.x2));
+    y1 = Math.max(this.y1, Math.min(this.y1 + y1, this.y2));
+    y2 = Math.max(this.y1, Math.min(this.y1 + y2, this.y2));
+    const r = new Region(this.canvas, x1, y1, x2, y2);
+    r.cursorX = this.cursorX;
+    r.cursorY = this.cursorY;
+    r.attr = this.attr;
+    return r;
+  }
+
+  color(fg?: string | number, bg?: string | number): this {
+    if (fg) {
+      const attr = (typeof fg === "string") ? xterm256.get_color(fg) : fg;
+      this.attr = (this.attr & 0xff00) | attr;
+    }
+    if (bg) {
+      const attr = (typeof bg === "string") ? xterm256.get_color(bg) : bg;
+      this.attr = (this.attr & 0xff) | (attr << 8);
+    }
     return this;
   }
 
-  backgroundColor(c: string | number): this {
-    this.bg = typeof c === "string" ? xterm256.get_color(c) : c;
-    return this;
+  backgroundColor(bg: string | number): this {
+    return this.color(undefined, bg);
   }
 
   at(x: number, y: number): this {
-    this.x = x;
-    this.y = y;
-    return this;
-  }
-
-  write(s: string): this {
-    for (let i = 0; i < s.length; i++) {
-      this._put(this.x, this.y, this.bg, this.fg, s[i]);
-      this.x += 1;
-      if (this.x >= this.width) {
-        this.x = 0;
-        this.y += 1;
-        if (this.y >= this.height) {
-          this.y = 0;
-        }
-      }
-    }
+    this.cursorX = Math.max(Math.min(x, this.cols), 0);
+    this.cursorY = Math.max(Math.min(y, this.rows), 0);
     return this;
   }
 
   clear(): this {
-    this.fillBackground(this.bg == TRANSPARENT ? BLACK : this.bg);
+    this.canvas.nextBuffer.clearBox(this.x1, this.y1, this.x2, this.y2, this.attr);
     return this;
   }
 
-  scroll(deltaX: number, deltaY: number): this {
-    const directionX = deltaX < 0 ? -1 : 1;
-    const directionY = deltaY < 0 ? -1 : 1;
-    const absX = Math.abs(deltaX);
-    const absY = Math.abs(deltaY);
-
-    const bg = this.bg == TRANSPARENT ? BLACK : this.bg;
-    const blank = bg * Math.pow(2, 28) + SPACE;
-
-    if (absX >= this.width || absY >= this.height) {
-      this.clear();
-      return this;
-    }
-
-    const destX = directionX > 0 ? 0 : absX;
-    const sourceX = directionX > 0 ? absX : 0;
-    const widthX = this.width - absX;
-    for (let i = 0; i < this.height - absY; i++) {
-      const destY = directionY > 0 ? i : this.height - i - 1;
-      const destIndex = destY * this.width + destX;
-      const sourceY = destY + deltaY;
-      const sourceIndex = sourceY * this.width + sourceX;
-      // splice is dog-slow here! :(
-      if (directionX > 0) {
-        for (let j = 0; j < widthX; j++) this.grid[destIndex + j] = this.grid[sourceIndex + j];
-      } else {
-        for (let j = widthX - 1; j >= 0; j--) this.grid[destIndex + j] = this.grid[sourceIndex + j];
+  write(s: string): this {
+    while (s.length > 0) {
+      // check for auto-scroll, only when we need to write another glyph
+      if (this.cursorX >= this.cols) {
+        this.cursorX = 0;
+        this.cursorY++;
+        if (this.cursorY >= this.rows) {
+          this.scrollUp();
+          this.cursorY = this.rows - 1;
+        }
       }
-    }
 
-    // pad vertical
-    for (let i = 0; i < absY; i++) {
-      const y = directionY > 0 ? this.height - i - 1 : i;
-      const index = y * this.width;
-      for (let x = 0; x < this.width; x++) {
-        this.grid[index + x] = blank;
-      }
-    }
-
-    // pad horizontal
-    for (let i = 0; i < absX; i++) {
-      const x = directionX > 0 ? this.width - i - 1 : i;
-      for (let y = 0; y < this.height; y++) {
-        this.grid[y * this.width + x] = blank;
-      }
+      const n = this.cols - this.cursorX;
+      const text = s.slice(0, n);
+      this.canvas.write(this.x1 + this.cursorX, this.y1 + this.cursorY, this.attr, text);
+      this.cursorX += text.length;
+      s = s.slice(n);
     }
 
     return this;
   }
 
-  fillBackground(color: string | number): this {
-    this.backgroundColor(color);
-    for (let i = 0; i < this.width * this.height; i++) {
-      this._puti(i, this.bg, this.fg, SPACE);
-    }
+  draw(other: Region): this {
+    const maxx = this.cols - this.cursorX, maxy = this.rows - this.cursorY;
+    if (other.cols > maxx || other.rows > maxy) other = other.clip(0, 0, maxx, maxy);
+    this.canvas.nextBuffer.putBox(this.x1, this.y1, other.canvas.nextBuffer, other.x1, other.y1, other.x2, other.y2);
     return this;
   }
 
-  toStrings(options: { dropBlanks?: boolean } = {}): string[] {
-    const rv: string[] = [];
-    for (let y = 0; y < this.height; y++) {
-      let line = "";
-      let lastbg = -1;
-      let lastfg = -1;
-      let allBlank = true;
-      for (let x = 0; x < this.width; x++) {
-        const [ bg, fg, ch ] = this._get(x, y);
-        if (lastbg != bg) line += bgString(bg);
-        if (lastfg != fg) line += fgString(fg);
-        lastbg = bg;
-        lastfg = fg;
-        line += String.fromCharCode(ch);
-        if (ch != SPACE) allBlank = false;
-      }
-      line += RESET_ATTRIBUTES;
-      rv.push(options.dropBlanks && allBlank ? "" : line);
-    }
-    return rv;
+  scrollUp(rows: number = 1): this {
+    this.canvas.nextBuffer.scrollUp(this.x1, this.y1, this.x2, this.y2, rows, this.attr);
+    return this;
   }
 
-  // ----- implementation details:
-
-  private _put(x: number, y: number, bg: number, fg: number, ch: string | number): void {
-    this._puti(y * this.width + x, bg, fg, typeof ch === "string" ? ch.charCodeAt(0) : ch);
+  scrollDown(rows: number = 1): this {
+    this.canvas.nextBuffer.scrollDown(this.x1, this.y1, this.x2, this.y2, rows, this.attr);
+    return this;
   }
 
-  private _puti(index: number, bg: number, fg: number, ch: number): void {
-    if (bg == TRANSPARENT || fg == TRANSPARENT) {
-      const [ oldbg, oldfg, _ ] = this._geti(index);
-      if (bg == TRANSPARENT) bg = oldbg;
-      if (fg == TRANSPARENT) fg = oldfg;
-    }
-    // don't try to use bit operators here. in js, they truncate the number to 32 bits first.
-    this.grid[index] = bg * Math.pow(2, 28) + fg * Math.pow(2, 20) + ch;
+  scrollLeft(cols: number = 1): this {
+    this.canvas.nextBuffer.scrollLeft(this.x1, this.y1, this.x2, this.y2, cols, this.attr);
+    return this;
   }
 
-  private _get(x: number, y: number): [ number, number, number ] {
-    return this._geti(y * this.width + x);
-  }
-
-  private _geti(index: number): [ number, number, number ] {
-    const cell = this.grid[index];
-    const colors = Math.floor(cell / Math.pow(2, 20)) & 0xffff;
-    return [ colors >> 8, colors & 0xff, cell & 0xfffff ];
+  scrollRight(cols: number = 1): this {
+    this.canvas.nextBuffer.scrollRight(this.x1, this.y1, this.x2, this.y2, cols, this.attr);
+    return this;
   }
 }

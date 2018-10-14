@@ -1,4 +1,4 @@
-import { Canvas } from "../antsy/canvas2";
+import { Canvas } from "../antsy/canvas";
 
 import "should";
 import "source-map-support/register";
