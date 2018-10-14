@@ -170,4 +170,10 @@ export class Region {
     this.canvas.nextBuffer.scrollRight(this.x1, this.y1, this.x2, this.y2, cols, this.attr);
     return this;
   }
+
+  moveCursor(x: number = this.cursorX, y: number = this.cursorY): this {
+    this.canvas.nextBuffer.cursorX = x;
+    this.canvas.nextBuffer.cursorY = y;
+    return this;
+  }
 }

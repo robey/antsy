@@ -92,6 +92,7 @@ export function computeDiff(oldBuffer: TextBuffer, newBuffer: TextBuffer): strin
     }
   }
 
+  out += move(oldBuffer, newBuffer.cursorX, newBuffer.cursorY);
   newBuffer.clearDirty();
   return out;
 }

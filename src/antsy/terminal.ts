@@ -2,6 +2,11 @@
 
 const CSI = "\u001b[";
 
+/*
+ * a collection of static methods for generating the ANSI/xterm codes for
+ * doing simple operations like moving the cursor, clearing the screen or
+ * line, changing color, and scrolling.
+ */
 export class Terminal {
   static moveX(x: number): string {
     if (x == 0) return "";
