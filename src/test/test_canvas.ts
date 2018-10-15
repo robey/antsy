@@ -1,114 +1,219 @@
-import * as canvas from "../antsy/canvas";
+import { Canvas } from "../antsy/canvas";
 
 import "should";
+import "source-map-support/register";
 
-const WHITE_ON_BLACK = "\u001b[48;5;0m\u001b[38;5;15m";
-const GREEN_ON_BLACK = "\u001b[48;5;0m\u001b[38;5;2m";
-const BLACK_ON_BLACK = "\u001b[48;5;0m\u001b[38;5;0m";
-const SET_FG_GREEN = "\u001b[38;5;2m";
-const SET_FG_RED = "\u001b[38;5;9m";
-const SET_FG_BLACK = "\u001b[38;5;0m";
-const SET_BG_BLUE = "\u001b[48;5;12m";
-const RESET = canvas.RESET_ATTRIBUTES;
+const RESET_COLOR = "[[37m[[40m";
+const CLEAR = "[[2J[[H";
+const RESET = RESET_COLOR + CLEAR;
+const SET_FG_GREEN = "[[32m";
+const SET_FG_RED = "[[38;5;9m";
+const SET_BG_BLUE = "[[48;5;12m";
 
-describe("canvas", () => {
+const escpaint = (c: Canvas): string => c.paint().replace(/\u001b/g, "[");
+
+describe("Canvas", () => {
   it("makes a blank grid", () => {
-    const c = new canvas.Canvas(3, 3);
-    c.toStrings().should.eql([
-      `${WHITE_ON_BLACK}   ${RESET}`,
-      `${WHITE_ON_BLACK}   ${RESET}`,
-      `${WHITE_ON_BLACK}   ${RESET}`
-    ]);
+    const c = new Canvas(3, 3);
+    escpaint(c).should.eql(`${RESET}`);
   });
 
   it("sets colors", () => {
-    const c = new canvas.Canvas(5, 3);
-    c.at(1, 0).color("green").write("wh").backgroundColor("00f").write("ut");
-    c.toStrings().should.eql([
-      `${WHITE_ON_BLACK} ${SET_FG_GREEN}wh${SET_BG_BLUE}ut${RESET}`,
-      `${WHITE_ON_BLACK}     ${RESET}`,
-      `${WHITE_ON_BLACK}     ${RESET}`
-    ]);
+    const c = new Canvas(5, 3);
+    c.all().at(1, 0).color("green").write("wh").color(undefined, "00f").write("ut");
+    escpaint(c).should.eql(`${RESET} ${SET_FG_GREEN}wh${SET_BG_BLUE}ut[[5D`);
   });
 
   it("clears", () => {
-    const c = new canvas.Canvas(5, 3);
-    c.backgroundColor("blue").color("red").clear();
-    c.toStrings().should.eql([
-      `${SET_BG_BLUE}${SET_FG_RED}     ${RESET}`,
-      `${SET_BG_BLUE}${SET_FG_RED}     ${RESET}`,
-      `${SET_BG_BLUE}${SET_FG_RED}     ${RESET}`
-    ]);
+    const c = new Canvas(5, 3);
+    c.all().color("red", "blue").clear();
+    escpaint(c).should.eql(`${SET_FG_RED}${SET_BG_BLUE}${CLEAR}`);
+  });
+
+  it("skips unchanged", () => {
+    const c = new Canvas(15, 3);
+    const r = c.all();
+    r.at(0, 0).write("hi");
+    r.at(8, 0).write("ok");
+    r.at(10, 2).write("cat");
+    escpaint(c).should.eql(`${RESET}hi[[6Cok[[2Bcat[[H`);
+    escpaint(c).should.eql("");
+    r.at(0, 0).write("hi");
+    escpaint(c).should.eql("");
+  });
+
+  it("honors clipping", () => {
+    const c = new Canvas(15, 3);
+    const r = c.clip(5, 1, 10, 3);
+    r.at(0, 0).color("purple").write("midnight");
+    escpaint(c).should.eql(`${RESET}[[2;6H[[35mmidni[[3;6Hght[[H`);
+  })
+
+  describe("uses clear-to-EOL while painting", () => {
+    it("in the middle", () => {
+      const c = new Canvas(15, 3);
+      const r = c.all();
+      r.at(0, 0).write("random words!");
+      escpaint(c).should.eql(`${RESET}random words![[13D`);
+      r.at(3, 0).write("         ?");
+      escpaint(c).should.eql(`[[3C[[K[[9C?[[13D`);
+    });
+
+    it("at the start", () => {
+      const c = new Canvas(15, 3);
+      const r = c.all();
+      r.at(0, 0).write("random-words!");
+      escpaint(c).should.eql(`${RESET}random-words![[13D`);
+      r.at(0, 0).color(4).write("           ?");
+      escpaint(c).should.eql(`[[34m[[K[[11C?[[37m![[13D`);
+    });
+
+    it("at the end", () => {
+      const c = new Canvas(15, 3);
+      const r = c.all();
+      r.at(0, 0).write("random words!");
+      escpaint(c).should.eql(`${RESET}random words![[13D`);
+      r.at(3, 0).write("          ");
+      escpaint(c).should.eql(`[[3C[[K[[3D`);
+    });
+
+    it("around the middle", () => {
+      const c = new Canvas(30, 3);
+      const r = c.all();
+      r.at(0, 0).write("012345678901234567890123456789");
+      escpaint(c).should.eql(`${RESET}012345678901234567890123456789[[30D`);
+      r.backgroundColor(2).clip(0, 0, 30, 1).clear();
+      r.at(10, 0).backgroundColor(5).write("          ");
+      escpaint(c).should.eql("[[42m[[K[[10C[[45m          [[20D");
+    });
+
+    it("three times", () => {
+      const c = new Canvas(35, 3);
+      const r = c.all();
+      r.at(0, 0).write("01234567890123456789012345678901234");
+      escpaint(c).should.eql(`${RESET}01234567890123456789012345678901234[[35D`);
+      r.backgroundColor(2).clip(0, 0, 35, 1).clear();
+      r.at(8, 0).backgroundColor(5).write("                ");
+      escpaint(c).should.eql("[[42m[[K[[8C[[45m[[K[[16C[[42m[[K[[24D");
+    });
+  });
+
+  it("clears a region", () => {
+    const c = new Canvas(10, 10);
+    for (let y = 0; y < 10; y++) c.all().at(0, y).write("##########");
+    escpaint(c);
+    c.clip(3, 3, 9, 7).clear();
+    escpaint(c).should.eql("[[4;4H      [[5;4H      [[6;4H      [[7;4H      [[H");
+  });
+
+  it("writes canvas into each other", () => {
+    // make a background and a box, and draw them into the main canvas to simulate animation.
+    const c = new Canvas(10, 10);
+    const bg = new Canvas(10, 10);
+    const box = new Canvas(4, 4);
+    bg.all().backgroundColor("navy").clear();
+    box.all().backgroundColor("maroon").clear().at(0, 0).color("white").write("+--+|  ||  |+--+");
+
+    c.all().draw(bg.all());
+    c.clip(3, 3, 10, 10).draw(box.all());
+    escpaint(c).should.eql(
+      `${RESET}[[44m[[K[[B[[K[[B[[K[[B` +
+      `   [[38;5;15m[[41m+--+[[37m[[44m   ` +
+      `[[5H   [[38;5;15m[[41m|  |[[37m[[44m   ` +
+      `[[6H   [[38;5;15m[[41m|  |[[37m[[44m   ` +
+      `[[7H   [[38;5;15m[[41m+--+[[37m[[44m   ` +
+      `[[8H[[K[[B[[K[[B[[K[[9A`
+    );
+
+    // move the box one place over, but "redraw" everything
+    c.all().draw(bg.all());
+    c.clip(4, 4, 10, 10).draw(box.all());
+    escpaint(c).should.eql(
+      `[[3B[[K` +
+      `[[5;4H [[38;5;15m[[41m+--+` +
+      `[[6;4H[[37m[[44m [[38;5;15m[[41m|  |` +
+      `[[7;4H[[37m[[44m [[38;5;15m[[41m|  |` +
+      `[[8;5H+--+[[H`
+    );
+  });
+
+  it("places the cursor", () => {
+    const c = new Canvas(10, 10);
+    c.all().at(0, 4).write(">").at(0, 3).write("Ready.").moveCursor(2, 4);
+    escpaint(c).should.eql(`${RESET}[[3BReady.[[5H>[[C`);
   });
 
   describe("scrolls", () => {
-    function xyq() {
-      const c = new canvas.Canvas(5, 5);
-      c.color("green").clear();
-      c.at(2, 2).write("X");
-      c.at(3, 3).write("Y");
-      c.at(1, 1).write("Q");
+    function stars(): Canvas {
+      const c = new Canvas(7, 7);
+      const r = c.all();
+      r.at(0, 0).write("*******");
+      for (let y = 1; y < 6; y++) {
+        r.at(0, y).write("*");
+        r.at(6, y).write("*");
+      }
+      r.at(0, 6).write("*******");
+      r.at(1, 2).write("first");
+      r.at(1, 3).write("secnd");
+      r.at(1, 4).write("third");
+      escpaint(c).should.eql(`${RESET}*******[[2H*     *[[3H*first*[[4H*secnd*[[5H*third*[[6H*     *[[7H*******[[H`);
       return c;
     }
 
     it("up", () => {
-      const c = xyq();
-      c.scroll(0, 2);
-      c.toStrings().should.eql([
-        `${GREEN_ON_BLACK}  X  ${RESET}`,
-        `${GREEN_ON_BLACK}   Y ${RESET}`,
-        `${GREEN_ON_BLACK}     ${RESET}`,
-        `${BLACK_ON_BLACK}     ${RESET}`,
-        `${BLACK_ON_BLACK}     ${RESET}`
-      ]);
+      const c = stars();
+      c.all().scrollUp(2);
+      escpaint(c).should.eql("[[1;7r[[2S[[r[[H");
+    });
+
+    it("up region", () => {
+      const c = stars();
+      c.clip(1, 1, 6, 6).scrollUp(2);
+      escpaint(c).should.eql("[[2;6r[[2S[[r[[5H*     *[[6H*     *[[H");
     });
 
     it("down", () => {
-      const c = xyq();
-      c.scroll(0, -2);
-      c.toStrings().should.eql([
-        `${BLACK_ON_BLACK}     ${RESET}`,
-        `${BLACK_ON_BLACK}     ${RESET}`,
-        `${GREEN_ON_BLACK}     ${RESET}`,
-        `${GREEN_ON_BLACK} Q   ${RESET}`,
-        `${GREEN_ON_BLACK}  X  ${RESET}`
-      ]);
+      const c = stars();
+      c.all().scrollDown(2);
+      escpaint(c).should.eql("[[1;7r[[2T[[r[[H");
+    });
+
+    it("down region", () => {
+      const c = stars();
+      c.clip(1, 1, 6, 6).scrollDown(2);
+      escpaint(c).should.eql("[[2;6r[[2T[[r[[2H*     *[[3H*     *[[H");
     });
 
     it("left", () => {
-      const c = xyq();
-      c.scroll(2, 0);
-      c.toStrings().should.eql([
-        `${GREEN_ON_BLACK}   ${SET_FG_BLACK}  ${RESET}`,
-        `${GREEN_ON_BLACK}   ${SET_FG_BLACK}  ${RESET}`,
-        `${GREEN_ON_BLACK}X  ${SET_FG_BLACK}  ${RESET}`,
-        `${GREEN_ON_BLACK} Y ${SET_FG_BLACK}  ${RESET}`,
-        `${GREEN_ON_BLACK}   ${SET_FG_BLACK}  ${RESET}`
-      ]);
+      const c = stars();
+      c.all().scrollLeft(2);
+      escpaint(c).should.eql("*****  [[2H    *  [[3Hirst*  [[4Hecnd*  [[5Hhird*  [[6H    *  [[7;6H  [[H");
+    });
+
+    it("left region", () => {
+      const c = stars();
+      c.clip(1, 1, 6, 6).scrollLeft(2);
+      escpaint(c).should.eql("[[3;2Hrst  [[4;2Hcnd  [[5;2Hird  [[H");
     });
 
     it("right", () => {
-      const c = xyq();
-      c.scroll(-2, 0);
-      c.toStrings().should.eql([
-        `${BLACK_ON_BLACK}  ${SET_FG_GREEN}   ${RESET}`,
-        `${BLACK_ON_BLACK}  ${SET_FG_GREEN} Q ${RESET}`,
-        `${BLACK_ON_BLACK}  ${SET_FG_GREEN}  X${RESET}`,
-        `${BLACK_ON_BLACK}  ${SET_FG_GREEN}   ${RESET}`,
-        `${BLACK_ON_BLACK}  ${SET_FG_GREEN}   ${RESET}`
-      ]);
+      const c = stars();
+      c.all().scrollRight(2);
+      escpaint(c).should.eql("  [[2H  *    [[3H  *firs[[4H  *secn[[5H  *thir[[6H  *    [[7H  [[H");
     });
 
-    it("up and right", () => {
-      const c = xyq();
-      c.scroll(-1, 1);
-      c.toStrings().should.eql([
-        `${BLACK_ON_BLACK} ${SET_FG_GREEN} Q  ${RESET}`,
-        `${BLACK_ON_BLACK} ${SET_FG_GREEN}  X ${RESET}`,
-        `${BLACK_ON_BLACK} ${SET_FG_GREEN}   Y${RESET}`,
-        `${BLACK_ON_BLACK} ${SET_FG_GREEN}    ${RESET}`,
-        `${BLACK_ON_BLACK}     ${RESET}`
-      ]);
+    it("right region", () => {
+      const c = stars();
+      c.clip(1, 1, 6, 6).scrollRight(2);
+      escpaint(c).should.eql("[[3;2H  fir[[4;2H  sec[[5;2H  thi[[H");
+    });
+
+    it("on overflow", () => {
+      const c = new Canvas(5, 3);
+      c.all().at(0, 2).write("hi");
+      escpaint(c).should.eql(`${RESET}[[2Bhi[[H`);
+      c.all().at(2, 2).write("tops");
+      escpaint(c).should.eql("[[Bhitop[[3Hs [[H");
     });
   });
 });

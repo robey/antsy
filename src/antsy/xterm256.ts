@@ -1,33 +1,23 @@
 import { COLOR_NAMES } from "./color_names";
 
-// why isn't this part of js?
-const range = (start: number, end: number): number[] => {
-  const rv = new Array(end - start);
-  for (let i = start; i < end; i++) rv[i - start] = i;
-  return rv;
-};
-
 const COLOR_CUBE = [ 0x00, 0x5f, 0x87, 0xaf, 0xd7, 0xff ];
-const GRAY_LINE = range(0, 24).map(i => 8 + 10 * i);
-const ANSI_LINE = range(0, 16).map(i => {
-  const c = (i & 8) != 0 ? 0xff : 0x80;
-  return [
-    (i & 1) != 0 ? c : 0,
-    (i & 2) != 0 ? c : 0,
-    (i & 4) != 0 ? c : 0
-  ];
-});
+const GRAY_LINE = [
+  8, 18, 28, 38, 48, 58, 68, 78, 88, 98, 108, 118,
+  128, 138, 148, 158, 168, 178, 188, 198, 208, 218, 228, 238
+];
+const ANSI_LINE = [
+  [ 0x00, 0x00, 0x00 ], [ 0x80, 0x00, 0x00 ], [ 0x00, 0x80, 0x00 ], [ 0x80, 0x80, 0x00 ],
+  [ 0x00, 0x00, 0x80 ], [ 0x80, 0x00, 0x80 ], [ 0x00, 0x80, 0x80 ], [ 0xc0, 0xc0, 0xc0 ],
+  [ 0x80, 0x80, 0x80 ], [ 0xff, 0x00, 0x00 ], [ 0x00, 0xff, 0x00 ], [ 0xff, 0xff, 0x00 ],
+  [ 0x00, 0x00, 0xff ], [ 0xff, 0x00, 0xff ], [ 0x00, 0xff, 0xff ], [ 0xff, 0xff, 0xff ],
+];
 
 const CUBE_OFFSET = 16;
 const GRAY_OFFSET = 232;
 
-// two special cases
-ANSI_LINE[8] = ANSI_LINE[7];
-ANSI_LINE[7] = [ 0xc0, 0xc0, 0xc0 ];
-
 const HEX_RE = /^[\da-fA-F]{3}([\da-fA-F]{3})?$/;
 
-const cache = {};
+const cache: { [key: string]: number } = {};
 
 // parse a color name, or "#fff" or "#cc0033" into a color index
 export function get_color(name: string): number {
@@ -41,12 +31,12 @@ export function get_color(name: string): number {
 // given a hex like "fff" or "cc0033", return the closest matching color in xterm-256 as an index (0 - 255)
 export function color_from_hex(hex: string): number {
   if (cache[hex] != null) return cache[hex];
-  const realhex = hex.length == 3 ? hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2] : hex;
+  if (hex.length == 3) return color_from_hex(hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]);
   const [ red, green, blue ] = [
-    parseInt(realhex.slice(0, 2), 16),
-    parseInt(realhex.slice(2, 4), 16),
-    parseInt(realhex.slice(4, 6), 16)
-  ] as number[];
+    parseInt(hex.slice(0, 2), 16),
+    parseInt(hex.slice(2, 4), 16),
+    parseInt(hex.slice(4, 6), 16)
+  ];
   const index = nearest_color(red, green, blue);
   cache[hex] = index;
   return index;
@@ -91,10 +81,19 @@ function color_distance(
   red1: number, green1: number, blue1: number,
   red2: number, green2: number, blue2: number
 ): number {
-  return Math.sqrt(Math.pow(red1 - red2, 2) + Math.pow(green1 - green2, 2) + Math.pow(blue1 - blue2, 2));
+  // don't bother with sqrt, we just care about which is smaller.
+  return (red1 - red2) * (red1 - red2) + (green1 - green2) * (green1 - green2) + (blue1 - blue2) * (blue1 - blue2);
 }
 
 // return the index of the element in list that's closest to n.
 function find_closest(n: number, list: number[]): number {
-  return list.map((item, index) => [ Math.abs(item - n), index ]).sort((a, b) => a[0] - b[0])[0][1];
+  let candidate = 0, weight = Math.abs(list[candidate] - n);
+  for (let i = 1; i < list.length; i++) {
+    const w = Math.abs(list[i] - n);
+    if (w < weight) {
+      candidate = i;
+      weight = w;
+    }
+  }
+  return candidate;
 }
