@@ -1,23 +1,34 @@
 # Antsy
 
-Antsy is a simple library for letting you write text into a canvas, in up to 256 colors. When you're done, it will generate a list of strings with the ansi codes for your creation.
+Antsy is a library that provides a canvas for drawing full-color (xterm-256) text and generating the ANSI/xterm codes to efficiently paint it into a terminal. It remembers the previous state after each `paint` operation, so as you update the canvas, it generates only the minimal codes necessary for the update.
+
+It's like a modern typescript implementation of the lower half of ncurses.
 
 ```javascript
 var antsy = require("antsy");
 var canvas = new antsy.Canvas(80, 24);
-canvas.at(0, 23).backgroundColor("#00f").write("i am on a blue background!");
+var region = canvas.all();
+region.at(0, 23).backgroundColor("#000080").write("i am on a blue background!");
 
-// now print it out!
-canvas.toStrings().map(console.log);
+// now write it out to the terminal!
+// generates: '\e[37m\e[40m\e[2J\e[H\e[23B\e[44mi am on a blue background!\e[H'
+process.stdout.write(canvas.paint());
+
+region.at(10, 23).color("#ff0").write("BLUE");
+
+// now update that word!
+// generates: '\e[24;11H\e[38;5;11mBLUE\e[H'
+process.stdout.write(canvas.paint());
 ```
 
-That's all it does.
+That's all it does. The intent is that this would be enough to build a widget library on top of, if you want, by using a separate Canvas for each widget, drawing them into the main canvas in z-buffer order, and calling `paint()` to generate the diff as ANSI/xterm codes. (Check `test_canvas.ts` for an example.)
+
 
 ## xterm-256
 
-All modern terminals support 256-color "xterm" control codes, so antsy uses them. There's an exhaustive explanation of the encoding in the docs/ folder.
+All modern terminals support 256-color "xterm" control codes, so antsy uses them. There's an [exhaustive explanation of the encoding](docs/xterm-256.md) in the docs/ folder.
 
-Antsy uses an incredibly fast, state-of-the-art plutonic algorithm for determining the closest "xterm" color to a 24-bit web-style color code. You can use it yourself via the exported `get_color` function:
+Antsy uses an incredibly fast, state-of-the-art hylaean algorithm for determining the closest "xterm" color to a 24-bit web-style color code. You can use it yourself via the exported `get_color` function:
 
 ```javascript
 var color = antsy.get_color("#ffffff"); // 15
@@ -25,26 +36,91 @@ var color = antsy.get_color("#ffffff"); // 15
 
 It also understands the three-letter alternate forms ("f00") and a basic set of American color names ("teal", "brown", and so on).
 
+
 ## Canvas
 
-Canvas builds a grid of color and text information. The following API lets you draw into it. Each function returns the Canvas object, so you can chain calls using a builder pattern.
+Antsy models a screen (or framebuffer) as a "canvas" which generates the ANSI codes, and clip regions which support drawing commands.
 
-You can set the foreground and/or background color to the special value `antsy.TRANSPARENT`, which will leave the previous color(s) alone when you write new text across old content.
+- `new Canvas(cols: number, rows: number)`
 
-- `new Canvas(width, height)` - Build a new canvas object of the given width and height (in character cells).
+    Create a new canvas with a framebuffer of the requested size. It will be cleared to white-on-black.
 
-- `color(name)` - Set the current foreground color, by name (using the `get_color` function described above).
+- `all(): Region`
 
-- `backgroundColor(name)` - Set the current background color, by name.
+    Return a new clipping/drawing region that covers the entire canvas.
 
-- `at(x, y)` - Move the cursor to the given coordinates, zero-based (x=0, y=0 is the upper left corner).
+- `clip(x1: number, y1: number, x2: number, y2: number): Region`
 
-- `write(string)` - Write the string as a series of character cells in the current foreground and background colors, starting at the current cursor position. The cursor's x position moves with each character. If it reaches the end of a line, it will wrap around to the beginning of the next line. Similarly, wrapping off the bottom of the canvas will move back to the top.
+    Return a new clipping/drawing region that begins at `x1, y1` inclusive and ends at `x2, y2` exclusive. For example, `clip(4, 3, 10, 5)` will return a region with an origin at column 4 (counting from 0), row 3, and is 6 columns wide and 2 columns tall. The point `(0, 0)` in the region will map to `(4, 3)` in the canvas.
 
-- `clear()` - Fill the canvas with spaces using the current background color.
+- `paint(): string`
 
-- `fillBackground(colorName)` - Fill the canvas with spaces, using the given color as the background color. This is just a convenience method for clearing the canvas to a color.
+    Return the ANSI codes that will paint the current canvas contents, since the last call. Each call to `paint()` caches the current canvas state, so that future updates only paint the parts of the screen that have changed since last time.
 
-- `scroll(deltaX, deltaY)` - Scroll the canvas horizontally or vertically (or both). `deltaX` is the number of character cells to move left (if positive) or right (if negative). `deltaX` is the number of cells to move up (if positive) or down (if negative). A normal one-line vertical terminal scroll would be `scroll(0, 1)`.
 
-- `toStrings()` - Return an array of strings which, if written to an ansi terminal, will draw the canvas. Each string is one line of the canvas, starting at line 0 (the top).
+## Region
+
+A clip region maps a rectangle of the canvas.
+
+- `all(): Region`
+
+    Return this region. This method exists only to match the method on `Canvas`.
+
+- `clip(x1: number, y1: number, x2: number, y2: number): Region`
+
+    Return a new clipping/drawing region that's possibly smaller than the current one. It can't expand to cover more than the current region.
+
+- `color(fg?: string | number, bg?: string | number): this`
+- `backgroundColor(bg: string | number): this`
+
+    Change the foreground (and optionally the background) color to match either a name or an HTML-style hex string like `#ff0088`.
+
+- `at(x: number, y: number): this`
+
+    Move the local cursor. Coordinates are zero-based.
+
+- `clear(): this`
+
+    Clear the entire region to the current background color.
+
+- `write(s: string): this`
+
+    Write a string to the current cursor coordinates. Text will wrap within the region if necessary. If text goes past the bottom line of the region, it will be scrolled.
+
+- `draw(other: Region): this`
+
+    Copy a region from another canvas into this region. If the other region is larger than this one, it will be clipped. The other region is always drawn into this one at `(0, 0)`: to draw into another coordinate, `clip` the region first.
+
+- `scrollUp(rows: number = 1): this`
+- `scrollDown(rows: number = 1): this`
+- `scrollLeft(cols: number = 1): this`
+- `scrollRight(cols: number = 1): this`
+
+    Scroll the region horizontally or vertically. "Up" means the characters shift up (like a scrolling terminal), and "down", "left", and "right" have similar meanings. New areas are filled with the current background color.
+
+- `moveCursor(x: number = this.cursorX, y: number = this.cursorY): this`
+
+    Move the screen's physical block cursor, either to an explicit cell, or to the current cursor location. This causes `paint()` to emit codes to move the cursor after all other drawing is done.
+
+
+## How it works
+
+`Canvas` stores two framebuffers: a "current" and a "next" one. They start identical, but all modifications made thru `Region`s are to the "next" buffer. Each "paint" call compares them and performs steps to make "current" match "next":
+
+1. If `clear()` was ever called on the entire canvas (`canvas.all().clear()`), then it emits a code to clear the current buffer to the color of the most recent `clear()` call.
+
+2. If any region was recently scrolled vertically, it checks to see if scrolling a section of the screen would be cheaper than redrawing those lines. If it would, then it emits the codes to set and scroll that section. ANSI/xterm only support scrolling a range of rows as wide as the screen, not just any rectangular box, so this isn't helpful as often as you'd hope.
+
+3. Finally, it iterates across all the rows that are different, "diffs" them, and redraws the needed segments. If it would be cheaper to emit an "erase to the end of the line" code anywhere along the row, then it will.
+
+After redrawing everything, it emits a code to move the cursor to the desired cell, and the two buffers are now identical. This logic is all in `canvas_diff.ts`.
+
+
+## License
+
+Apache 2 (open-source) license, included in `LICENSE.txt`.
+
+
+## Authors
+
+@robey - Robey Pointer <robeypointer@gmail.com>
