@@ -60,7 +60,7 @@ Antsy models a screen (or framebuffer) as a "canvas" which generates the ANSI co
 
 ## Region
 
-A clip region maps a rectangle of the canvas.
+A clip region maps a rectangle of the canvas, and can be drawn on.
 
 - `all(): Region`
 
@@ -89,7 +89,7 @@ A clip region maps a rectangle of the canvas.
 
 - `draw(other: Region): this`
 
-    Copy a region from another canvas into this region. If the other region is larger than this one, it will be clipped. The other region is always drawn into this one at `(0, 0)`: to draw into another coordinate, `clip` the region first.
+    Copy a region from another canvas into this region. If the other region is larger than this one, it will be clipped. The other region is always drawn into this one at `(0, 0)`: to draw into another coordinate, `clip` the region first. You can use this to give each UX element ("widget") its own canvas, and draw them into a region of the canvas representing the screen.
 
 - `scrollUp(rows: number = 1): this`
 - `scrollDown(rows: number = 1): this`
