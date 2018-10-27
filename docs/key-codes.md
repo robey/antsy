@@ -11,8 +11,8 @@ up      CSI A
 down    CSI B
 right   CSI C
 left    CSI D
-home    CSI H
-end     CSI F
+home    CSI H  (alt: CSI 1~)
+end     CSI F  (alt: CSI 4~)
 ins     CSI 2~
 del     CSI 3~
 pgup    CSI 5~
@@ -75,4 +75,11 @@ C-f9    CSI 20;2~
 C-f10   CSI 21;2~
 C-f11   CSI 23;2~
 C-f12   CSI 24;2~
+```
+
+## informational
+
+```
+begin paste     CSI 200~
+end paste       CSI 201~
 ```
