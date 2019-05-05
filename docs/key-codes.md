@@ -63,18 +63,18 @@ S-f10   CSI 21;2~
 S-f11   CSI 23;2~
 S-f12   CSI 24;2~
 
-C-f1    CSI 1;2P  (alt: CSI 11;2~)
-C-f2    CSI 1;2Q  (alt: CSI 12;2~)
-C-f3    CSI 1;2R  (alt: CSI 13;2~)
-C-f4    CSI 1;2S  (alt: CSI 14;2~)
-C-f5    CSI 15;2~
-C-f6    CSI 17;2~
-C-f7    CSI 18;2~
-C-f8    CSI 19;2~
-C-f9    CSI 20;2~
-C-f10   CSI 21;2~
-C-f11   CSI 23;2~
-C-f12   CSI 24;2~
+C-f1    CSI 1;5P  (alt: CSI 11;5~)
+C-f2    CSI 1;5Q  (alt: CSI 12;5~)
+C-f3    CSI 1;5R  (alt: CSI 13;5~)
+C-f4    CSI 1;5S  (alt: CSI 14;5~)
+C-f5    CSI 15;5~
+C-f6    CSI 17;5~
+C-f7    CSI 18;5~
+C-f8    CSI 19;5~
+C-f9    CSI 20;5~
+C-f10   CSI 21;5~
+C-f11   CSI 23;5~
+C-f12   CSI 24;5~
 ```
 
 ## informational
