@@ -5,6 +5,7 @@ import * as xterm256 from "./xterm256";
 
 const WHITE = 7; // xterm256.get_color("gray");
 const BLACK = 0; // xterm256.get_color("black");
+const DEFAULT_ATTR = (BLACK << 8) | WHITE;
 
 const SPACE = 0x20;
 
@@ -17,8 +18,14 @@ export class Canvas {
 
   constructor(public cols: number, public rows: number) {
     this.nextBuffer = new TextBuffer(cols, rows);
-    this.currentBuffer = new TextBuffer(cols, rows);
-    this.nextBuffer.clearBox(0, 0, cols, rows, (BLACK << 8) | WHITE);
+    this.nextBuffer.clearBox(0, 0, cols, rows, DEFAULT_ATTR);
+  }
+
+  resize(cols: number, rows: number) {
+    this.nextBuffer.resize(cols, rows, DEFAULT_ATTR);
+    delete this.currentBuffer;
+    this.cols = cols;
+    this.rows = rows;
   }
 
   all(): Region {

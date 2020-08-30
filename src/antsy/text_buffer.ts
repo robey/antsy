@@ -18,12 +18,12 @@ export class ScrollRegion {
 
 export class TextBuffer {
   // unicode codepoint for each grid element (0 = blank)
-  public chars: Uint32Array;
+  public chars!: Uint32Array;
   // BBFF: background color (u8), foreground color (u8)
-  public attrs: Uint16Array;
+  public attrs!: Uint16Array;
 
   // mark rows that have been updated
-  public dirty: Uint8Array;
+  public dirty!: Uint8Array;
   // was "clear" called, and it's waiting to be painted?
   public pendingClear?: number;
   // remember the last few vertical scrolls, in case they help optimize drawing
@@ -36,13 +36,43 @@ export class TextBuffer {
   public attr: number;
 
   constructor(public cols: number, public rows: number) {
+    this.alloc(cols, rows);
+    this.cursorX = 0;
+    this.cursorY = 0;
+    this.attr = -1;
+  }
+
+  resize(cols: number, rows: number, defaultAttr: number) {
+    const oldChars = this.chars;
+    const oldAttrs = this.attrs;
+    const oldCols = this.cols;
+    const oldRows = this.rows;
+    this.alloc(cols, rows);
+
+    // invalidate everything, then copy over what will fit.
+    this.clearBox(0, 0, cols, rows, defaultAttr);
+    for (let y = 0; y < Math.min(oldRows, this.rows); y++) {
+      this.setDirty(y);
+      const left = this.cols * y;
+      const oldLeft = oldCols * y;
+      for (let x = 0; x < Math.min(oldCols, this.cols); x++) {
+        this.chars[left + x] = oldChars[oldLeft + x];
+        this.attrs[left + x] = oldAttrs[oldLeft + x];
+      }
+    }
+
+    this.pendingScrolls = [];
+    this.cursorX = Math.min(this.cursorX, cols - 1);
+    this.cursorY = Math.min(this.cursorY, rows - 1);
+  }
+
+  private alloc(cols: number, rows: number) {
     if (cols < 0 || rows < 0 || rows > MAX_HEIGHT) throw new Error(`Invalid terminal size ${cols} x ${rows}`);
     this.chars = new Uint32Array(rows * cols);
     this.attrs = new Uint16Array(rows * cols);
     this.dirty = new Uint8Array(Math.ceil(rows / 8));
-    this.cursorX = 0;
-    this.cursorY = 0;
-    this.attr = -1;
+    this.cols = cols;
+    this.rows = rows;
   }
 
   put(x: number, y: number, attr: number, char: number) {

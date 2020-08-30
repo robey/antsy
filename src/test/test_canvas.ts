@@ -143,6 +143,16 @@ describe("Canvas", () => {
     escpaint(c).should.eql(`${RESET}[[3BReady.[[5H>[[C`);
   });
 
+  it("resizes", () => {
+    const c = new Canvas(10, 10);
+    c.all().color("00f").at(5, 3).write("hello");
+    c.all().color("f00").at(0, 9).write("ok");
+    escpaint(c).should.eql(`${RESET}[[4;6H[[38;5;12mhello[[10H[[38;5;9mok[[H`);
+
+    c.resize(8, 11);
+    escpaint(c).should.eql(`${RESET}[[4;6H[[38;5;12mhel[[10H[[38;5;9mok[[H`);
+  });
+
   describe("scrolls", () => {
     function stars(): Canvas {
       const c = new Canvas(7, 7);
