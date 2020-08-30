@@ -57,6 +57,10 @@ Antsy models a screen (or framebuffer) as a "canvas" which generates the ANSI co
 
     Return the ANSI codes that will paint the current canvas contents, since the last call. Each call to `paint()` caches the current canvas state, so that future updates only paint the parts of the screen that have changed since last time.
 
+- `paintInline(): string`
+
+    Return the ANSI codes that will paint the current canvas contents as if the screen was in an unknown (dirty) state. Every glyph and color will be rendered, separated by linefeeds, without cursor manipulation. This may be useful for rendering small canvases that are meant to be embedded in other displays or output that doesn't know about the canvas.
+
 
 ## Region
 
