@@ -1,4 +1,5 @@
 import { computeDiff } from "./canvas_diff";
+import { Terminal } from "./terminal";
 import { TextBuffer } from "./text_buffer";
 import * as xterm256 from "./xterm256";
 
@@ -33,9 +34,12 @@ export class Canvas {
   }
 
   write(x: number, y: number, attr: number, s: string) {
-    for (let i = 0; i < s.length; i++) {
-      const ch = s.codePointAt(i) || SPACE;
-      if (ch > 0xffff) i++;
+    this.writeChars(x, y, attr, [...s]);
+  }
+
+  writeChars(x: number, y: number, attr: number, chars: string[]) {
+    for (let i = 0; i < chars.length; i++) {
+      const ch = chars[i].codePointAt(0) ?? SPACE;
       this.nextBuffer.put(x++, y, attr, ch);
       if (x >= this.cols || y >= this.rows) return;
     }
@@ -46,8 +50,28 @@ export class Canvas {
     if (this.currentBuffer === undefined) this.currentBuffer = new TextBuffer(this.cols, this.rows);
     return computeDiff(this.currentBuffer, this.nextBuffer);
   }
-}
 
+  // generate linefeed-terminated lines of text, assuming we don't own the
+  // screen, so we can't move the cursor and have to output every char.
+  paintInline(): string {
+    return [...Array(this.nextBuffer.rows).keys()].map(y => {
+      let line = "";
+      let fg = -1, bg = -1;
+
+      for (let x = 0; x < this.nextBuffer.cols; x++) {
+        const attr = this.nextBuffer.getAttr(x, y);
+        if ((attr >> 8) != bg) line += Terminal.bg(attr >> 8);
+        if ((attr & 0xff) != fg) line += Terminal.fg(attr & 0xff);
+        line += String.fromCodePoint(this.nextBuffer.getChar(x, y));
+        fg = attr & 0xff;
+        bg = attr >> 8;
+      }
+
+      line += Terminal.noColor() + "\n";
+      return line;
+    }).join("");
+  }
+}
 
 // Clipped region of a canvas
 export class Region {
@@ -96,11 +120,11 @@ export class Region {
   }
 
   color(fg?: string | number, bg?: string | number): this {
-    if (fg) {
+    if (fg !== undefined) {
       const attr = (typeof fg === "string") ? xterm256.get_color(fg) : fg;
       this.attr = (this.attr & 0xff00) | attr;
     }
-    if (bg) {
+    if (bg !== undefined) {
       const attr = (typeof bg === "string") ? xterm256.get_color(bg) : bg;
       this.attr = (this.attr & 0xff) | (attr << 8);
     }
@@ -123,7 +147,8 @@ export class Region {
   }
 
   write(s: string): this {
-    while (s.length > 0) {
+    let chars = [...s];
+    while (chars.length > 0) {
       // check for auto-scroll, only when we need to write another glyph
       if (this.cursorX >= this.cols) {
         this.cursorX = 0;
@@ -135,10 +160,10 @@ export class Region {
       }
 
       const n = this.cols - this.cursorX;
-      const text = s.slice(0, n);
-      this.canvas.write(this.x1 + this.cursorX, this.y1 + this.cursorY, this.attr, text);
-      this.cursorX += text.length;
-      s = s.slice(n);
+      const slice = chars.slice(0, n);
+      this.canvas.writeChars(this.x1 + this.cursorX, this.y1 + this.cursorY, this.attr, slice);
+      this.cursorX += slice.length;
+      chars = chars.slice(slice.length);
     }
 
     return this;
