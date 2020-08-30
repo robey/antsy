@@ -58,5 +58,21 @@ describe("xterm256", () => {
       xterm256.get_color("wuh").should.eql(7);
       xterm256.get_color("black").should.eql(0);
     });
+
+    it("get_rgb", () => {
+      xterm256.xterm_to_rgb(0).should.eql(0x000000);
+      xterm256.xterm_to_rgb(3).should.eql(0x808000);
+      xterm256.xterm_to_rgb(12).should.eql(0x0000ff);
+      xterm256.xterm_to_rgb(15).should.eql(0xffffff);
+      xterm256.xterm_to_rgb(16).should.eql(0x000000);
+      xterm256.xterm_to_rgb(100).should.eql(0x878700);
+      xterm256.xterm_to_rgb(188).should.eql(0xd7d7d7);
+      xterm256.xterm_to_rgb(197).should.eql(0xff005f);
+      xterm256.xterm_to_rgb(231).should.eql(0xffffff);
+      xterm256.xterm_to_rgb(232).should.eql(0x080808);
+      xterm256.xterm_to_rgb(252).should.eql(0xd0d0d0);
+      xterm256.xterm_to_rgb(253).should.eql(0xdadada);
+      xterm256.xterm_to_rgb(255).should.eql(0xeeeeee);
+    });
   });
 });

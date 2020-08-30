@@ -52,6 +52,10 @@ export class Terminal {
     return `${CSI}48;5;${index}m`;
   }
 
+  static noColor(): string {
+    return `${CSI}m`;
+  }
+
   // note: most terminals will scramble cursor location after scrolling
   static scrollUp(top: number, bottom: number, rows: number): string {
     return `${CSI}${top + 1};${bottom}r${CSI}${rows}S${CSI}r`;

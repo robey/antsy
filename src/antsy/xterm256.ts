@@ -28,6 +28,42 @@ export function get_color(name: string): number {
   return 7;
 }
 
+// return an RRGGBB value for a given color name
+export function name_to_rgb(name: string): number {
+  if (COLOR_NAMES[name]) name = COLOR_NAMES[name];
+  if (name[0] == "#") name = name.slice(1);
+  if (name.match(HEX_RE)) return hex_to_rgb(name);
+  // default to gray
+  return 0x7f7f7f;
+}
+
+// given a hex like "fff" or "cc0033", return the closest matching color in xterm-256 as an index (0 - 255)
+function hex_to_rgb(hex: string): number {
+  if (hex.length == 3) return hex_to_rgb(hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]);
+  const [ red, green, blue ] = [
+    parseInt(hex.slice(0, 2), 16),
+    parseInt(hex.slice(2, 4), 16),
+    parseInt(hex.slice(4, 6), 16)
+  ];
+  return (red << 16) | (green << 8) | blue;
+}
+
+// return an RRGGBB value for the given xterm color
+export function xterm_to_rgb(xtermColor: number): number {
+  if (xtermColor < 0 || xtermColor > 0xff) return 0;
+  if (xtermColor < 0x10) {
+    const [ r, g, b ] = ANSI_LINE[xtermColor];
+    return r * 0x10000 + g * 0x100 + b;
+  }
+  if (xtermColor < 0xe8) {
+    const r = COLOR_CUBE[Math.floor((xtermColor - 0x10) / 36)];
+    const g = COLOR_CUBE[Math.floor(((xtermColor - 0x10) % 36) / 6)];
+    const b = COLOR_CUBE[(xtermColor - 0x10) % 6];
+    return r * 0x10000 + g * 0x100 + b;
+  }
+  return GRAY_LINE[xtermColor - 0xe8] * 0x10101;
+}
+
 // given a hex like "fff" or "cc0033", return the closest matching color in xterm-256 as an index (0 - 255)
 export function color_from_hex(hex: string): number {
   if (cache[hex] != null) return cache[hex];
