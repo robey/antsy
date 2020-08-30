@@ -204,8 +204,8 @@ function getDirtySpans(oldBuffer: TextBuffer, newBuffer: TextBuffer, y: number):
 }
 
 function checkScroll(oldBuffer: TextBuffer, newBuffer: TextBuffer, s: ScrollRegion): string {
-  const originalCost = sum(range(s.top, s.bottom), y => computeRowDistance(oldBuffer, y, newBuffer).distance);
   let newCost = 0;
+  const originalCost = sum(range(s.top, s.bottom), y => computeRowDistance(oldBuffer, y, newBuffer).distance);
   if (s.rows > 0) {
     newCost += sum(range(s.top, s.bottom - s.rows), y => {
       return computeRowDistance(oldBuffer, y + s.rows, newBuffer, y).distance;

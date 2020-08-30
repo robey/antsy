@@ -5,7 +5,7 @@ Xterm-256 colors are broken into 3 groups:
 
 - 0x00 - 0x0f: 16 basic ANSI colors, from MS-DOS days
 - 0x10 - 0xe7: 6x6x6 color cube
-- 0xe8 - 0xff: 24 gradiants of gray
+- 0xe8 - 0xff: 24 gradients of gray
 
 ANSI colors
 -----------
