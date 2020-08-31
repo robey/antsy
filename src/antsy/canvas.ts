@@ -15,6 +15,8 @@ export class Canvas {
   nextBuffer: TextBuffer;
   // current: what's currently on the screen
   currentBuffer?: TextBuffer;
+  // cache the main region
+  _all?: Region;
 
   constructor(public cols: number, public rows: number) {
     this.nextBuffer = new TextBuffer(cols, rows);
@@ -26,18 +28,16 @@ export class Canvas {
     delete this.currentBuffer;
     this.cols = cols;
     this.rows = rows;
+    if (this._all) this._all.resize(0, 0, this.cols, this.rows);
   }
 
   all(): Region {
-    return new Region(this, 0, 0, this.cols, this.rows);
+    if (!this._all) this._all = new Region(this, 0, 0, this.cols, this.rows);
+    return this._all;
   }
 
   clip(x1: number, y1: number, x2: number, y2: number): Region {
-    x1 = Math.max(0, Math.min(x1, this.cols));
-    x2 = Math.max(0, Math.min(x2, this.cols));
-    y1 = Math.max(0, Math.min(y1, this.rows));
-    y2 = Math.max(0, Math.min(y2, this.rows));
-    return new Region(this, Math.max(x1, 0), y1, x2, y2);
+    return this.all().clip(x1, y1, x2, y2);
   }
 
   write(x: number, y: number, attr: number, s: string) {
@@ -80,11 +80,13 @@ export class Canvas {
   }
 }
 
+
 // Clipped region of a canvas
 export class Region {
   public cursorX: number;
   public cursorY: number;
   public attr: number;
+  public resizeListeners: Set<() => void> = new Set();
 
   constructor(
     public canvas: Canvas,
@@ -106,6 +108,10 @@ export class Region {
     return this.y2 - this.y1;
   }
 
+  onResize(f: () => void) {
+    this.resizeListeners.add(f);
+  }
+
   all(): Region {
     const r = new Region(this.canvas, 0, 0, this.canvas.cols, this.canvas.rows);
     r.cursorX = this.cursorX + this.x1;
@@ -124,6 +130,17 @@ export class Region {
     r.cursorY = this.cursorY;
     r.attr = this.attr;
     return r;
+  }
+
+  // usually called by a layout engine
+  resize(x1: number, y1: number, x2: number, y2: number) {
+    this.x1 = x1;
+    this.y1 = y1;
+    this.x2 = x2;
+    this.y2 = y2;
+    // clip cursor:
+    this.at(this.cursorX, this.cursorY);
+    for (const f of [...this.resizeListeners]) f();
   }
 
   color(fg?: string | number, bg?: string | number): this {
