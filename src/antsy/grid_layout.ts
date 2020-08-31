@@ -1,16 +1,9 @@
 import { Region } from "./canvas";
 
-interface FixedConstraint {
-  kind: "fixed";
-  cells: number;
-}
-
-interface StretchConstraint {
-  kind: "stretch";
+export interface Constraint {
+  minimum: number;
   factor: number;
 }
-
-export type Constraint = FixedConstraint | StretchConstraint;
 
 export class GridLayout {
   lefts: number[];
@@ -28,12 +21,16 @@ export class GridLayout {
     });
   }
 
-  static fixed(cells: number): FixedConstraint {
-    return { kind: "fixed", cells };
+  static fixed(cells: number): Constraint {
+    return { minimum: cells, factor: 0 };
   }
 
-  static stretch(factor: number): StretchConstraint {
-    return { kind: "stretch", factor };
+  static stretch(factor: number): Constraint {
+    return { minimum: 0, factor };
+  }
+
+  static stretchFrom(minimum: number, factor: number): Constraint {
+    return { minimum, factor };
   }
 
   layout(x1: number, y1: number, x2: number, y2: number): Region {
@@ -71,31 +68,24 @@ function sum(list: number[]): number {
 }
 
 function calculateSizes(constraints: Constraint[], size: number): number[] {
-  const fixed = sum(constraints.map(c => c.kind == "fixed" ? c.cells : 0));
-  const weight = sum(constraints.map(c => c.kind == "stretch" ? c.factor : 0));
+  const fixed = sum(constraints.map(c => c.minimum));
+  const weight = sum(constraints.map(c => c.factor));
   let fixedRemain = Math.min(size, fixed);
   const stretch = size - fixedRemain;
   let stretchRemain = stretch;
 
   const sizes = constraints.map(c => {
-    let n = 0;
-    switch (c.kind) {
-      case "fixed":
-        n = Math.min(fixedRemain, c.cells);
-        fixedRemain -= n;
-        break;
-      case "stretch":
-        n = Math.floor(stretch * c.factor / weight);
-        stretchRemain -= n;
-        break;
-    }
-    return n;
+    const n1 = Math.min(fixedRemain, c.minimum);
+    fixedRemain -= n1;
+    const n2 = Math.floor(stretch * c.factor / weight);
+    stretchRemain -= n2;
+    return n1 + n2;
   });
 
   // the truncation above may result in unused space. allocate it round-robin
   // to the stretch constraints until it's used up.
   for (let i = 0; stretchRemain > 0; i++) {
-    if (constraints[i].kind == "stretch") {
+    if (constraints[i].factor > 0) {
       sizes[i]++;
       stretchRemain--;
     }

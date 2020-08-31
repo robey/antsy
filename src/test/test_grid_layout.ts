@@ -81,4 +81,16 @@ describe("GridLayout", () => {
     dimensions(r3).should.eql([ 55, 0, 23, 22 ]);
     dimensions(r4).should.eql([ 0, 22, 78, 2 ]);
   });
+
+  it("stretchFrom", () => {
+    const c = new Canvas(80, 24);
+    const grid = new GridLayout(
+      c.all(),
+      [ GridLayout.stretchFrom(8, 1), GridLayout.stretch(2) ],
+      [ GridLayout.stretch(1), GridLayout.fixed(2) ],
+    );
+
+    grid.lefts.should.eql([ 0, 32, 80 ]);
+    grid.tops.should.eql([ 0, 22, 24 ]);
+  });
 });
