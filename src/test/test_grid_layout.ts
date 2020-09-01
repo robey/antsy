@@ -82,15 +82,62 @@ describe("GridLayout", () => {
     dimensions(r4).should.eql([ 0, 22, 78, 2 ]);
   });
 
-  it("stretchFrom", () => {
-    const c = new Canvas(80, 24);
+  it("stretch with minimum", () => {
+    const c = new Canvas(60, 24);
     const grid = new GridLayout(
       c.all(),
-      [ GridLayout.stretchFrom(8, 1), GridLayout.stretch(2) ],
+      [ GridLayout.stretchWithMinimum(1, 8), GridLayout.stretch(2) ],
       [ GridLayout.stretch(1), GridLayout.fixed(2) ],
     );
 
-    grid.lefts.should.eql([ 0, 32, 80 ]);
+    grid.lefts.should.eql([ 0, 20, 60 ]);
     grid.tops.should.eql([ 0, 22, 24 ]);
+
+    c.resize(18, 24);
+    grid.lefts.should.eql([ 0, 8, 18 ]);
+    grid.tops.should.eql([ 0, 22, 24 ]);
+  });
+
+  it("several fixed", () => {
+    // 10-min sidebar on each side, 1/2 center column, 1/6 right column
+    const c = new Canvas(120, 24);
+    const grid = new GridLayout(
+      c.all(),
+      [ GridLayout.stretchWithMinimum(1, 10), GridLayout.stretch(3), GridLayout.stretch(1), GridLayout.stretchWithMinimum(1, 10) ],
+      [ GridLayout.stretch(1) ],
+    );
+
+    grid.lefts.should.eql([ 0, 20, 80, 100, 120 ]);
+    grid.tops.should.eql([ 0, 24 ]);
+
+    c.resize(60, 24);
+    grid.lefts.should.eql([ 0, 10, 40, 50, 60 ]);
+    grid.tops.should.eql([ 0, 24 ]);
+
+    c.resize(40, 24);
+    grid.lefts.should.eql([ 0, 10, 25, 30, 40 ]);
+    grid.tops.should.eql([ 0, 24 ]);
+  });
+
+  it("adjust constraints", () => {
+    const c = new Canvas(60, 24);
+    const grid = new GridLayout(
+      c.all(),
+      [ GridLayout.stretchWithMinimum(1, 8), GridLayout.stretch(2) ],
+      [ GridLayout.stretch(1), GridLayout.fixed(2) ],
+    );
+
+    grid.lefts.should.eql([ 0, 20, 60 ]);
+    grid.tops.should.eql([ 0, 22, 24 ]);
+    const r1 = grid.layoutAt(0, 0);
+    const r2 = grid.layoutAt(1, 0);
+    dimensions(r1).should.eql([ 0, 0, 20, 22 ]);
+    dimensions(r2).should.eql([ 20, 0, 40, 22 ]);
+
+    grid.adjustCol(0, GridLayout.stretchWithMinimum(1, 30));
+    grid.lefts.should.eql([ 0, 30, 60 ]);
+    grid.tops.should.eql([ 0, 22, 24 ]);
+    dimensions(r1).should.eql([ 0, 0, 30, 22 ]);
+    dimensions(r2).should.eql([ 30, 0, 30, 22 ]);
   });
 });

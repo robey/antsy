@@ -6,18 +6,14 @@ export interface Constraint {
 }
 
 export class GridLayout {
-  lefts: number[];
-  tops: number[];
+  lefts: number[] = [];
+  tops: number[] = [];
   resizeListeners: Set<() => void> = new Set();
 
   constructor(public region: Region, public colConstraints: Constraint[], public rowConstraints: Constraint[]) {
-    // all elements are 0 sized until we resize.
-    this.lefts = colConstraints.map(_ => 0);
-    this.tops = rowConstraints.map(_ => 0);
     this.resize(region.cols, region.rows);
     region.onResize(() => {
       this.resize(region.cols, region.rows);
-      for (const f of [...this.resizeListeners]) f();
     });
   }
 
@@ -29,8 +25,24 @@ export class GridLayout {
     return { minimum: 0, factor };
   }
 
-  static stretchFrom(minimum: number, factor: number): Constraint {
+  static stretchWithMinimum(factor: number, minimum: number): Constraint {
     return { minimum, factor };
+  }
+
+  update(colConstraints: Constraint[], rowConstraints: Constraint[]) {
+    this.colConstraints = colConstraints;
+    this.rowConstraints = rowConstraints;
+    this.resize(this.region.cols, this.region.rows);
+  }
+
+  adjustCol(x: number, c: Constraint) {
+    this.colConstraints[x] = c;
+    this.update(this.colConstraints, this.rowConstraints);
+  }
+
+  adjustRow(y: number, c: Constraint) {
+    this.rowConstraints[y] = c;
+    this.update(this.colConstraints, this.rowConstraints);
   }
 
   layout(x1: number, y1: number, x2: number, y2: number): Region {
@@ -59,6 +71,8 @@ export class GridLayout {
       return top - h;
     });
     this.tops.push(top);
+
+    for (const f of [...this.resizeListeners]) f();
   }
 }
 
@@ -67,29 +81,47 @@ function sum(list: number[]): number {
   return list.reduce((sum, n) => sum + n, 0);
 }
 
+interface ConstraintCalculation {
+  constraint: Constraint;
+  size?: number;
+  possibleSize: number;
+}
+
 function calculateSizes(constraints: Constraint[], size: number): number[] {
-  const fixed = sum(constraints.map(c => c.minimum));
-  const weight = sum(constraints.map(c => c.factor));
-  let fixedRemain = Math.min(size, fixed);
-  const stretch = size - fixedRemain;
-  let stretchRemain = stretch;
+  // divide up the space by weight, but if any element doesn't make its
+  // minimum, give it a fixed size and don't count it among the weights.
+  const results: ConstraintCalculation[] = constraints.map(constraint => ({ constraint, possibleSize: 0 }));
+  let remaining = size;
 
-  const sizes = constraints.map(c => {
-    const n1 = Math.min(fixedRemain, c.minimum);
-    fixedRemain -= n1;
-    const n2 = Math.floor(stretch * c.factor / weight);
-    stretchRemain -= n2;
-    return n1 + n2;
-  });
+  let solved = false;
+  while (!solved) {
+    solved = true;
 
-  // the truncation above may result in unused space. allocate it round-robin
-  // to the stretch constraints until it's used up.
-  for (let i = 0; stretchRemain > 0; i++) {
-    if (constraints[i].factor > 0) {
-      sizes[i]++;
-      stretchRemain--;
+    // only unplaced elements contribute to weight
+    const weight = sum(results.filter(r => r.size === undefined).map(r => r.constraint.factor));
+    for (const r of results) {
+      if (r.size !== undefined) continue;
+      r.possibleSize = Math.floor(remaining * r.constraint.factor / weight);
+      if (r.possibleSize < r.constraint.minimum) {
+        // weighted distribution didn't give this element its minimum size.
+        // pin it to the minimum size, remove it from the available space,
+        // remove it from the pool of weighted elements, and do another round.
+        r.size = Math.min(r.constraint.minimum, remaining);
+        remaining -= r.size;
+        solved = false;
+      }
     }
   }
 
-  return sizes;
+  // the truncation above may result in unused space. allocate it round-robin
+  // to the stretch constraints until it's used up.
+  let total = sum(results.map(r => r.size ?? r.possibleSize));
+  for (let i = 0; total < size; i++) {
+    if (results[i].constraint.factor > 0 && results[i].size === undefined) {
+      results[i].possibleSize++;
+      total++;
+    }
+  }
+
+  return results.map(r => r.size ?? r.possibleSize);
 }
