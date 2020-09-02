@@ -1,16 +1,17 @@
 export enum Modifier {
-  Meta,
-  Shift,
-  Control,
+  Shift = 1,
+  Alt = 2,
+  Control = 4,
+  Meta = 8,
 }
 
 function modifiersFromFlags(n: number): Modifier[] {
   const rv: Modifier[] = [];
   n -= 1;
   if (n & 8) rv.push(Modifier.Meta);
+  if (n & 2) rv.push(Modifier.Alt);
   if (n & 1) rv.push(Modifier.Shift);
   if (n & 4) rv.push(Modifier.Control);
-  // alt (old name for meta) was 2
   return rv;
 }
 
@@ -36,21 +37,15 @@ export enum KeyType {
 }
 
 export class Key {
-  constructor(public modifiers: Modifier[], public type: KeyType, public key: string = "") {
+  constructor(public modifiers: Modifier, public type: KeyType, public key: string = "") {
     // pass
   }
 
   toString(): string {
-    const segments: string[] = this.modifiers.map(m => {
-      switch (m) {
-        case Modifier.Meta:
-          return "M";
-        case Modifier.Shift:
-          return "S";
-        case Modifier.Control:
-          return "C";
-      }
-    });
+    const segments: string[] = [];
+    if ((this.modifiers & (Modifier.Meta | Modifier.Alt)) != 0) segments.push("M");
+    if (this.modifiers & Modifier.Shift) segments.push("S");
+    if (this.modifiers & Modifier.Control) segments.push("C");
 
     switch (this.type) {
       case KeyType.Normal:
@@ -98,7 +93,7 @@ const ESC_TIMEOUT = 200;
 // parse incoming xterm-encoded keypresses and emit decoded keys
 export class KeyParser {
   state: State = State.Normal;
-  modifiers: Modifier[] = [];
+  modifiers: Modifier = 0;
   buffer = "";
   lastKey = Date.now();
 
@@ -132,11 +127,11 @@ export class KeyParser {
         switch (c) {
           case Ascii.TAB:
             rv.push(new Key(this.modifiers, KeyType.Tab));
-            this.modifiers = [];
+            this.modifiers = 0;
             return false;
           case Ascii.CR:
             rv.push(new Key(this.modifiers, KeyType.Return));
-            this.modifiers = [];
+            this.modifiers = 0;
             return false;
           case Ascii.ESC:
             this.state = State.Esc;
@@ -144,16 +139,16 @@ export class KeyParser {
           case Ascii.BACKSPACE:
           case Ascii.DEL:
             rv.push(new Key(this.modifiers, KeyType.Backspace));
-            this.modifiers = [];
+            this.modifiers = 0;
             return false;
           default:
             if (c < 32) {
               // control codes!
-              this.modifiers.push(Modifier.Control);
+              this.modifiers |= Modifier.Control;
               c += 64;
             }
             rv.push(new Key(this.modifiers, KeyType.Normal, String.fromCodePoint(c)));
-            this.modifiers = [];
+            this.modifiers = 0;
             return false;
         }
 
@@ -168,7 +163,7 @@ export class KeyParser {
             return false;
           default:
             // well crap. assume they meant meta.
-            if (this.modifiers.indexOf(Modifier.Meta) < 0) this.modifiers.push(Modifier.Meta);
+            this.modifiers |= Modifier.Meta;
             this.state = State.Normal;
             return this.feedCodepoint(c, rv);
         }
@@ -180,18 +175,18 @@ export class KeyParser {
         }
         this.parseCsi(rv, String.fromCodePoint(c), this.buffer.split(/[;:]/).map(s => parseInt(s, 10)));
         this.state = State.Normal;
-        this.modifiers = [];
+        this.modifiers = 0;
         return false;
 
       case State.SS3:
         if (c >= Ascii.P && c <= Ascii.S) {
           rv.push(new Key(this.modifiers, KeyType.Function, (1 + c - Ascii.P).toString()));
           this.state = State.Normal;
-          this.modifiers = [];
+          this.modifiers = 0;
           return false;
         } else {
           // what is ESC O (something)? we don't support it.
-          rv.push(new Key([ Modifier.Meta ], KeyType.Normal, "O"));
+          rv.push(new Key(Modifier.Meta, KeyType.Normal, "O"));
           this.state = State.Normal;
           return this.feedCodepoint(c, rv);
         }
@@ -199,7 +194,7 @@ export class KeyParser {
   }
 
   parseCsi(rv: Key[], command: string, args: number[]) {
-    if (args[0] == 1 && args.length >= 2) this.modifiers = this.modifiers.concat(modifiersFromFlags(args[1]));
+    if (args[0] == 1 && args.length >= 2) this.modifiers |= (args[1] - 1);
 
     switch (command) {
       case "A":
@@ -233,7 +228,7 @@ export class KeyParser {
         rv.push(new Key(this.modifiers, KeyType.Function, "4"));
         break;
       case "~": {
-        if (args.length > 1) this.modifiers = this.modifiers.concat(modifiersFromFlags(args[1]));
+        if (args.length > 1) this.modifiers = this.modifiers |= (args[1] - 1);
         switch (args[0] || 0) {
           case 1:
             rv.push(new Key(this.modifiers, KeyType.Home));
@@ -302,8 +297,8 @@ export class KeyParser {
       }
       default:
         // well crap. CSI + garbage?
-        rv.push(new Key([ Modifier.Meta ], KeyType.Normal, "["));
-        rv.push(new Key([], KeyType.Normal, command));
+        rv.push(new Key(Modifier.Meta, KeyType.Normal, "["));
+        rv.push(new Key(0, KeyType.Normal, command));
         break;
     }
   }
