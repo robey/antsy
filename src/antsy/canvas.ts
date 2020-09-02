@@ -17,10 +17,21 @@ export class Canvas {
   currentBuffer?: TextBuffer;
   // cache the main region
   _all?: Region;
+  // do we want to be redrawn?
+  dirty = true;
+  // track a debounce listener for dirty events
+  dirtyListener?: () => void;
+  dirtyTimer?: NodeJS.Timeout;
+  dirtyDebounceDelay = 0;
 
   constructor(public cols: number, public rows: number) {
     this.nextBuffer = new TextBuffer(cols, rows);
     this.nextBuffer.clearBox(0, 0, cols, rows, DEFAULT_ATTR);
+  }
+
+  onDirty(debounceDelay: number, f: () => void) {
+    this.dirtyListener = f;
+    this.dirtyDebounceDelay = debounceDelay;
   }
 
   resize(cols: number, rows: number) {
@@ -40,11 +51,27 @@ export class Canvas {
     return this.all().clip(x1, y1, x2, y2);
   }
 
+  setDirty() {
+    this.dirty = true;
+    if (!this.dirtyListener) return;
+    if (!this.dirtyTimer) this.dirtyTimer = setTimeout(() => {
+      this.dirtyTimer = undefined;
+      if (this.dirty && this.dirtyListener) {
+        try {
+          this.dirtyListener();
+        } catch (error) {
+          // pass
+        }
+      }
+    }, this.dirtyDebounceDelay);
+  }
+
   write(x: number, y: number, attr: number, s: string) {
     this.writeChars(x, y, attr, [...s]);
   }
 
   writeChars(x: number, y: number, attr: number, chars: string[]) {
+    this.setDirty();
     for (let i = 0; i < chars.length; i++) {
       const ch = chars[i].codePointAt(0) ?? SPACE;
       this.nextBuffer.put(x++, y, attr, ch);
@@ -55,6 +82,7 @@ export class Canvas {
   paint(): string {
     // don't create currentBuffer unless they actually call paint
     if (this.currentBuffer === undefined) this.currentBuffer = new TextBuffer(this.cols, this.rows);
+    this.dirty = false;
     return computeDiff(this.currentBuffer, this.nextBuffer);
   }
 
@@ -167,6 +195,7 @@ export class Region {
 
   clear(): this {
     this.canvas.nextBuffer.clearBox(this.x1, this.y1, this.x2, this.y2, this.attr);
+    this.canvas.setDirty();
     return this;
   }
 
@@ -197,32 +226,38 @@ export class Region {
     const maxx = this.cols - this.cursorX, maxy = this.rows - this.cursorY;
     if (other.cols > maxx || other.rows > maxy) other = other.clip(0, 0, maxx, maxy);
     this.canvas.nextBuffer.putBox(this.x1, this.y1, other.canvas.nextBuffer, other.x1, other.y1, other.x2, other.y2);
+    this.canvas.setDirty();
     return this;
   }
 
   scrollUp(rows: number = 1): this {
     this.canvas.nextBuffer.scrollUp(this.x1, this.y1, this.x2, this.y2, rows, this.attr);
+    this.canvas.setDirty();
     return this;
   }
 
   scrollDown(rows: number = 1): this {
     this.canvas.nextBuffer.scrollDown(this.x1, this.y1, this.x2, this.y2, rows, this.attr);
+    this.canvas.setDirty();
     return this;
   }
 
   scrollLeft(cols: number = 1): this {
     this.canvas.nextBuffer.scrollLeft(this.x1, this.y1, this.x2, this.y2, cols, this.attr);
+    this.canvas.setDirty();
     return this;
   }
 
   scrollRight(cols: number = 1): this {
     this.canvas.nextBuffer.scrollRight(this.x1, this.y1, this.x2, this.y2, cols, this.attr);
+    this.canvas.setDirty();
     return this;
   }
 
   moveCursor(x: number = this.cursorX, y: number = this.cursorY): this {
-    this.canvas.nextBuffer.cursorX = x;
-    this.canvas.nextBuffer.cursorY = y;
+    this.canvas.nextBuffer.cursorX = this.x1 + x;
+    this.canvas.nextBuffer.cursorY = this.y1 + y;
+    this.canvas.setDirty();
     return this;
   }
 }
