@@ -135,6 +135,17 @@ describe("Canvas", () => {
       `[[7;4H[[37m[[44m [[38;5;15m[[41m|  |` +
       `[[8;5H+--+[[H`
     );
+
+    // move the box one place back, using the cursor instead of the clip region
+    c.all().draw(bg.all());
+    c.all().at(3, 3).draw(box.all());
+    escpaint(c).should.eql(
+      `[[4;4H+--+` +
+      `[[5;4H|  |[[37m[[44m ` +
+      `[[6;4H[[38;5;15m[[41m|  |[[37m[[44m ` +
+      `[[7;4H[[38;5;15m[[41m+--+[[37m[[44m ` +
+      `[[8H[[K[[7A`
+    );
   });
 
   it("places the cursor", () => {

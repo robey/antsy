@@ -141,11 +141,7 @@ export class Region {
   }
 
   all(): Region {
-    const r = new Region(this.canvas, 0, 0, this.canvas.cols, this.canvas.rows);
-    r.cursorX = this.cursorX + this.x1;
-    r.cursorY = this.cursorY + this.y1;
-    r.attr = this.attr;
-    return r;
+    return this;
   }
 
   clip(x1: number, y1: number, x2: number, y2: number): Region {
@@ -154,10 +150,8 @@ export class Region {
     y1 = Math.max(this.y1, Math.min(this.y1 + y1, this.y2));
     y2 = Math.max(this.y1, Math.min(this.y1 + y2, this.y2));
     const r = new Region(this.canvas, x1, y1, x2, y2);
-    r.cursorX = this.cursorX;
-    r.cursorY = this.cursorY;
     r.attr = this.attr;
-    return r;
+    return r.at(this.cursorX - x1, this.cursorY - y1);
   }
 
   // usually called by a layout engine
@@ -188,13 +182,20 @@ export class Region {
   }
 
   at(x: number, y: number): this {
-    this.cursorX = Math.max(Math.min(x, this.cols), 0);
-    this.cursorY = Math.max(Math.min(y, this.rows), 0);
+    this.cursorX = Math.max(Math.min(x, this.cols - 1), 0);
+    this.cursorY = Math.max(Math.min(y, this.rows - 1), 0);
     return this;
   }
 
   clear(): this {
     this.canvas.nextBuffer.clearBox(this.x1, this.y1, this.x2, this.y2, this.attr);
+    this.canvas.setDirty();
+    return this;
+  }
+
+  // clear region without memoizing the "clear screen" (mostly for testing)
+  clearSoft(): this {
+    for (let y = this.y1; y < this.y2; y++) this.canvas.nextBuffer.clearBox(this.x1, y, this.x2, y + 1, this.attr);
     this.canvas.setDirty();
     return this;
   }
@@ -225,7 +226,9 @@ export class Region {
   draw(other: Region): this {
     const maxx = this.cols - this.cursorX, maxy = this.rows - this.cursorY;
     if (other.cols > maxx || other.rows > maxy) other = other.clip(0, 0, maxx, maxy);
-    this.canvas.nextBuffer.putBox(this.x1, this.y1, other.canvas.nextBuffer, other.x1, other.y1, other.x2, other.y2);
+    const x = this.x1 + this.cursorX;
+    const y = this.y1 + this.cursorY;
+    this.canvas.nextBuffer.putBox(x, y, other.canvas.nextBuffer, other.x1, other.y1, other.x2, other.y2);
     this.canvas.setDirty();
     return this;
   }
