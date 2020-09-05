@@ -41,6 +41,14 @@ export class Key {
     // pass
   }
 
+  static normal(modifiers: Modifier, key: string): Key {
+    return new Key(modifiers, KeyType.Normal, key);
+  }
+
+  public equals(other: Key): boolean {
+    return this.modifiers == other.modifiers && this.type == other.type && this.key == other.key;
+  }
+
   toString(): string {
     const segments: string[] = [];
     if ((this.modifiers & (Modifier.Meta | Modifier.Alt)) != 0) segments.push("M");
