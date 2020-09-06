@@ -42,6 +42,11 @@ export class Canvas {
     if (this._all) this._all.resize(0, 0, this.cols, this.rows);
   }
 
+  redraw() {
+    delete this.currentBuffer;
+    this.setDirty();
+  }
+
   all(): Region {
     if (!this._all) this._all = new Region(this, 0, 0, this.cols, this.rows);
     return this._all;
@@ -193,9 +198,8 @@ export class Region {
     return this;
   }
 
-  // clear region without memoizing the "clear screen" (mostly for testing)
-  clearSoft(): this {
-    for (let y = this.y1; y < this.y2; y++) this.canvas.nextBuffer.clearBox(this.x1, y, this.x2, y + 1, this.attr);
+  clearToEndOfLine(): this {
+    this.canvas.nextBuffer.clearToEndOfLine(this.cursorX, this.cursorY, this.attr);
     this.canvas.setDirty();
     return this;
   }
