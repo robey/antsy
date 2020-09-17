@@ -47,7 +47,14 @@ describe("Canvas", () => {
     const r = c.clip(5, 1, 10, 3);
     r.at(0, 0).color("purple").write("midnight");
     escpaint(c).should.eql(`${RESET}[[2;6H[[35mmidni[[3;6Hght[[H`);
-  })
+  });
+
+  it("clips around linefeeds", () => {
+    const c = new Canvas(15, 3);
+    const r = c.clip(0, 1, 15, 3);
+    r.at(0, 0).color("purple").write("one\ntwo\nthree");
+    escpaint(c).should.eql(`${RESET}[[B[[35mtwo[[3Hthree[[H`);
+  });
 
   describe("uses clear-to-EOL while painting", () => {
     it("in the middle", () => {

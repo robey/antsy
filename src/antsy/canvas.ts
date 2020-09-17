@@ -205,17 +205,20 @@ export class Region {
   }
 
   write(s: string): this {
+    const lines = s.split("\n");
+    this.writeLine(lines.shift() ?? "");
+    while (lines.length > 0) {
+      this.lf();
+      this.writeLine(lines.shift() ?? "");
+    }
+    return this;
+  }
+
+  private writeLine(s: string): this {
     let chars = [...s];
     while (chars.length > 0) {
       // check for auto-scroll, only when we need to write another glyph
-      if (this.cursorX >= this.cols) {
-        this.cursorX = 0;
-        this.cursorY++;
-        if (this.cursorY >= this.rows) {
-          this.scrollUp();
-          this.cursorY = this.rows - 1;
-        }
-      }
+      if (this.cursorX >= this.cols) this.lf();
 
       const n = this.cols - this.cursorX;
       const slice = chars.slice(0, n);
@@ -225,6 +228,15 @@ export class Region {
     }
 
     return this;
+  }
+
+  private lf() {
+    this.cursorX = 0;
+    this.cursorY++;
+    if (this.cursorY >= this.rows) {
+      this.scrollUp();
+      this.cursorY = this.rows - 1;
+    }
   }
 
   draw(other: Region): this {
