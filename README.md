@@ -120,6 +120,11 @@ A clip region maps a rectangle of the canvas, and can be drawn on.
 After redrawing everything, it emits a code to move the cursor to the desired cell, and the two buffers are now identical. This logic is all in `canvas_diff.ts`.
 
 
+## To-do
+
+JS/ES cannot currently handle grapheme boundaries of combining marks, or identification of double-wide fixed-width glyphs (like emojis). Grapheme boundaries will be part of a [future spec](https://github.com/tc39/proposal-intl-segmenter). Heuristics may work for double-wide glyph detection. But until JS/ES support improves, this library will only work well with single-codepoint, single-width glyphs. If that's a bunch of jargon to you: "Stick with the ISO-8859 character sets or ASCII for now." :)
+
+
 ## License
 
 Apache 2 (open-source) license, included in `LICENSE.txt`.

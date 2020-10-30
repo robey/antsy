@@ -224,4 +224,8 @@ export class TextBuffer {
     for (let i = 0; i < this.dirty.length; i++) this.dirty[i] = 0;
     while (this.pendingScrolls.length > 0) this.pendingScrolls.pop();
   }
+
+  setAllDirty() {
+    for (let i = 0; i < this.dirty.length; i++) this.dirty[i] = 0xff;
+  }
 }

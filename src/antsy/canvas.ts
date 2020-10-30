@@ -19,6 +19,8 @@ export class Canvas {
   _all?: Region;
   // do we want to be redrawn?
   dirty = true;
+  // do we want to force the entire canvas to be redrawn?
+  forceAll = false;
   // track a debounce listener for dirty events
   dirtyListener?: () => void;
   dirtyTimer?: NodeJS.Timeout;
@@ -43,7 +45,7 @@ export class Canvas {
   }
 
   redraw() {
-    delete this.currentBuffer;
+    this.forceAll = true;
     this.setDirty();
   }
 
@@ -86,9 +88,20 @@ export class Canvas {
 
   paint(): string {
     // don't create currentBuffer unless they actually call paint
-    if (this.currentBuffer === undefined) this.currentBuffer = new TextBuffer(this.cols, this.rows);
+    if (this.currentBuffer === undefined) {
+      this.currentBuffer = new TextBuffer(this.cols, this.rows);
+    }
+
+    let clear = "";
+    if (this.forceAll) {
+      this.forceAll = false;
+      this.currentBuffer?.clearBox(0, 0, this.cols, this.rows, DEFAULT_ATTR);
+      clear += Terminal.noColor() + Terminal.clearScreen();
+      this.nextBuffer.setAllDirty();
+    }
+
     this.dirty = false;
-    return computeDiff(this.currentBuffer, this.nextBuffer);
+    return clear + computeDiff(this.currentBuffer, this.nextBuffer);
   }
 
   // generate linefeed-terminated lines of text, assuming we don't own the
