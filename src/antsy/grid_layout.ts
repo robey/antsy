@@ -101,7 +101,7 @@ function calculateSizes(constraints: Constraint[], size: number): number[] {
     const weight = sum(results.filter(r => r.size === undefined).map(r => r.constraint.factor));
     for (const r of results) {
       if (r.size !== undefined) continue;
-      r.possibleSize = Math.floor(remaining * r.constraint.factor / weight);
+      r.possibleSize = weight == 0 ? 0 : Math.floor(remaining * r.constraint.factor / weight);
       if (r.possibleSize < r.constraint.minimum) {
         // weighted distribution didn't give this element its minimum size.
         // pin it to the minimum size, remove it from the available space,
@@ -116,7 +116,7 @@ function calculateSizes(constraints: Constraint[], size: number): number[] {
   // the truncation above may result in unused space. allocate it round-robin
   // to the stretch constraints until it's used up.
   let total = sum(results.map(r => r.size ?? r.possibleSize));
-  for (let i = 0; total < size; i++) {
+  for (let i = 0; total < size && i < results.length; i++) {
     if (results[i].constraint.factor > 0 && results[i].size === undefined) {
       results[i].possibleSize++;
       total++;

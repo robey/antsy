@@ -140,4 +140,40 @@ describe("GridLayout", () => {
     dimensions(r1).should.eql([ 0, 0, 30, 22 ]);
     dimensions(r2).should.eql([ 30, 0, 30, 22 ]);
   });
+
+  describe("grid with all fixed widths", () => {
+    const c = new Canvas(60, 24);
+
+    it("goldilocks", () => {
+      const grid = new GridLayout(
+        c.all(),
+        [ GridLayout.stretch(1) ],
+        [ 6, 15, 3 ].map(n => GridLayout.fixed(n)),
+      );
+
+      grid.tops.should.eql([ 0, 6, 21, 24 ]);
+    });
+
+    it("too small", () => {
+      const grid = new GridLayout(
+        c.all(),
+        [ GridLayout.stretch(1) ],
+        [ 10, 15, 3 ].map(n => GridLayout.fixed(n)),
+      );
+
+      // remainders should be zero-height
+      grid.tops.should.eql([ 0, 10, 24, 24 ]);
+    });
+
+    it("too big", () => {
+      const grid = new GridLayout(
+        c.all(),
+        [ GridLayout.stretch(1) ],
+        [ 5, 10, 3 ].map(n => GridLayout.fixed(n)),
+      );
+
+      // empty space at the end
+      grid.tops.should.eql([ 0, 5, 15, 18 ]);
+    });
+  });
 });
