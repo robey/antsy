@@ -31,6 +31,10 @@ export class Canvas {
     this.nextBuffer.clearBox(0, 0, cols, rows, DEFAULT_ATTR);
   }
 
+  get cursor(): [ number, number ] {
+    return [ this.nextBuffer.cursorX, this.nextBuffer.cursorY ];
+  }
+
   onDirty(debounceDelay: number, f: () => void) {
     this.dirtyListener = f;
     this.dirtyDebounceDelay = debounceDelay;
