@@ -146,6 +146,10 @@ export class Region {
     this.attr = (BLACK << 8) | WHITE;
   }
 
+  toString(): string {
+    return `Region((${this.x1}, ${this.y1}) -> (${this.x2}, ${this.y2}))`;
+  }
+
   get cols(): number {
     return this.x2 - this.x1;
   }
@@ -212,7 +216,7 @@ export class Region {
   }
 
   clearToEndOfLine(): this {
-    this.canvas.nextBuffer.clearToEndOfLine(this.cursorX, this.cursorY, this.attr);
+    this.canvas.nextBuffer.clearToEndOfLine(this.x1 + this.cursorX, this.y1 + this.cursorY, this.attr);
     this.canvas.setDirty();
     return this;
   }

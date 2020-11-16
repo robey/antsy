@@ -161,6 +161,16 @@ describe("Canvas", () => {
     escpaint(c).should.eql(`${RESET}[[3BReady.[[5H>[[C`);
   });
 
+  it("clears to end of line in clip region", () => {
+    const c = new Canvas(10, 4);
+    for (let y = 0; y < 4; y++) c.all().at(0, y).write(y.toString());
+
+    const r = c.clip(0, 2, 10, 4);
+    r.at(0, 1).clearToEndOfLine();
+
+    escpaint(c).should.eql(`${RESET}0[[2H1[[3H2[[H`);
+  });
+
   it("resizes", () => {
     const c = new Canvas(10, 10);
     c.all().color("00f").at(5, 3).write("hello");
