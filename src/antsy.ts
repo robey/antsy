@@ -1,5 +1,5 @@
 export { Canvas, Region } from "./antsy/canvas";
-export { GridLayout } from "./antsy/grid_layout";
+export { Constraint, GridLayout } from "./antsy/grid_layout";
 export { Key, KeyParser, KeyType, Modifier } from "./antsy/keys";
 export { Terminal } from "./antsy/terminal";
 export { TextBuffer } from "./antsy/text_buffer";
