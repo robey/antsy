@@ -188,7 +188,10 @@ describe("Canvas", () => {
     escpaint(c).should.eql(`${RESET}[[4;6H[[38;5;12mhello[[10H[[38;5;9mok[[H`);
 
     c.redraw();
-    escpaint(c).should.eql(`[[m${CLEAR}[[4;6H[[38;5;12mhello[[10H[[38;5;9mok[[H`);
+    escpaint(c).should.eql(
+      `${RESET}[[37m[[40m[[K[[B[[K[[B[[K[[B     [[38;5;12mhello` +
+      `[[5H[[37m[[K[[B[[K[[B[[K[[B[[K[[B[[K[[B[[38;5;9mok[[37m[[K[[H`
+    );
   });
 
   describe("scrolls", () => {
