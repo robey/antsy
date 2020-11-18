@@ -213,6 +213,10 @@ export class Region {
     return this;
   }
 
+  move(xDelta: number, yDelta: number): this {
+    return this.at(this.cursorX + xDelta, this.cursorY + yDelta);
+  }
+
   clear(): this {
     this.canvas.nextBuffer.clearBox(this.x1, this.y1, this.x2, this.y2, this.attr);
     this.canvas.setDirty();
