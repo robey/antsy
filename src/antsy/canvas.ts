@@ -138,6 +138,10 @@ export class Region {
   public attr: number;
   public resizeListeners: Set<() => void> = new Set();
 
+  // used when this region was created by clipping another region:
+  // remember the parent region so resizes can be relative to it
+  public parent?: Region;
+
   constructor(
     public canvas: Canvas,
     public x1: number,
@@ -151,7 +155,9 @@ export class Region {
   }
 
   toString(): string {
-    return `Region((${this.x1}, ${this.y1}) -> (${this.x2}, ${this.y2}))`;
+    return `Region((${this.x1}, ${this.y1}) -> (${this.x2}, ${this.y2}), ` +
+      `cursor (${this.cursorX}, ${this.cursorY}), attr=$${this.attr.toString(16)}, ` +
+      `listeners=${this.resizeListeners.size})`;
   }
 
   get cols(): number {
@@ -177,15 +183,16 @@ export class Region {
     y2 = Math.max(this.y1, Math.min(this.y1 + y2, this.y2));
     const r = new Region(this.canvas, x1, y1, x2, y2);
     r.attr = this.attr;
+    r.parent = this;
     return r.at(this.cursorX - x1, this.cursorY - y1);
   }
 
   // usually called by a layout engine
   resize(x1: number, y1: number, x2: number, y2: number) {
-    this.x1 = x1;
-    this.y1 = y1;
-    this.x2 = x2;
-    this.y2 = y2;
+    this.x1 = x1 + (this.parent?.x1 ?? 0);
+    this.y1 = y1 + (this.parent?.y1 ?? 0);
+    this.x2 = x2 + (this.parent?.x1 ?? 0);
+    this.y2 = y2 + (this.parent?.y1 ?? 0);
     // clip cursor:
     this.at(this.cursorX, this.cursorY);
     for (const f of [...this.resizeListeners]) f();

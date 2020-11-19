@@ -176,4 +176,32 @@ describe("GridLayout", () => {
       grid.tops.should.eql([ 0, 5, 15, 18 ]);
     });
   });
+
+  it("resizes a nested region correctly", () => {
+    const c = new Canvas(10, 10);
+    const grid1 = new GridLayout(
+      c.all(),
+      [ 5, 5 ].map(n => GridLayout.fixed(n)),
+      [ 5, 5 ].map(n => GridLayout.fixed(n)),
+    );
+    const grid2 = new GridLayout(
+      grid1.layoutAt(1, 1),
+      [ GridLayout.fixed(2), GridLayout.stretch(1) ],
+      [ GridLayout.fixed(2), GridLayout.stretch(1) ],
+    );
+    const r = grid2.layoutAt(1, 1);
+    [ r.x1, r.y1, r.x2, r.y2 ].should.eql([ 7, 7, 10, 10 ]);
+
+    // inner region is moved
+    grid2.adjustCol(0, GridLayout.fixed(3));
+    [ r.x1, r.y1, r.x2, r.y2 ].should.eql([ 8, 7, 10, 10 ]);
+
+    // outer region is moved
+    grid1.adjustRow(0, GridLayout.fixed(4));
+    [ r.x1, r.y1, r.x2, r.y2 ].should.eql([ 8, 6, 10, 9 ]);
+
+    // outer region grows
+    grid1.adjustRow(1, GridLayout.stretch(1));
+    [ r.x1, r.y1, r.x2, r.y2 ].should.eql([ 8, 6, 10, 10 ]);
+  });
 });
