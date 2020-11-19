@@ -114,7 +114,7 @@ A region can be dynamically split into smaller regions using a set of grid const
 Given a list of horizontal constraints and a list of vertical constraints, a `GridLayout` will divide the available space and hand out regions that align with the requested grid. Constraints follow the traditional NextStep model, with the following options:
 
 - fixed size (in cells)
-- stretch to consume available space, with a weighting factor, and optional "minimum size" (in cells)
+- stretch to consume available space, with a weighting factor, and optional minimum/maximum sizes (in cells)
 
 In other layout engines, fixed is sometimes called "strut" and stretch is sometimes called "spring". The idea is that some rows or columns are a fixed size, and others grow or shrink to fill the rest of the available space.
 
@@ -135,7 +135,7 @@ For example, to build a simple text UI that has a fixed edit region at the botto
 +-----------------------+
 ````
 
-you could use a grid layout with 2 columns and 2 rows. The left column and top row are stretchy:
+...you could use a grid layout with 2 columns and 2 rows. The left column and top row are stretchy:
 
 ```
 const grid = new GridLayout(
@@ -160,8 +160,9 @@ const C = grid.layout(0, 1, 2, 2);
 - `GridLayout.fixed(cells: number): Constraint`
 - `GridLayout.stretch(factor: number): Constraint`
 - `GridLayout.stretchWithMinimum(factor: number, minimum: number): Constraint`
+- `GridLayout.stretchWithMinMax(factor: number, minimum: number, maximum: number): Constraint`
 
-    Define a constraint for the `GridLayout` constructor, either fixed size or stretchy (with a weighting factor and an optional minimum size).
+    Define a constraint for the `GridLayout` constructor, either fixed size or stretchy (with a weighting factor, an optional minimum size, and an optional maximum size).
 
 - `update(colConstraints: Constraint[], rowConstraints: Constraint[])`
 
