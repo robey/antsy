@@ -2,6 +2,7 @@ import { Region } from "./canvas";
 
 export interface Constraint {
   minimum: number;
+  maximum?: number;
   factor: number;
 }
 
@@ -26,6 +27,10 @@ export class GridLayout {
 
   static stretchWithMinimum(factor: number, minimum: number): Constraint {
     return { minimum, factor };
+  }
+
+  static stretchWithMinMax(factor: number, minimum: number, maximum: number): Constraint {
+    return { minimum, maximum, factor };
   }
 
   detach() {
@@ -110,6 +115,11 @@ function calculateSizes(constraints: Constraint[], size: number): number[] {
         // pin it to the minimum size, remove it from the available space,
         // remove it from the pool of weighted elements, and do another round.
         r.size = Math.min(r.constraint.minimum, remaining);
+        remaining -= r.size;
+        solved = false;
+      } else if (r.constraint.maximum !== undefined && r.possibleSize > r.constraint.maximum) {
+        // element doesn't want that much space. pin it and continue.
+        r.size = r.constraint.maximum;
         remaining -= r.size;
         solved = false;
       }

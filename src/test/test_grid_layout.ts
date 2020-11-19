@@ -204,4 +204,20 @@ describe("GridLayout", () => {
     grid1.adjustRow(1, GridLayout.stretch(1));
     [ r.x1, r.y1, r.x2, r.y2 ].should.eql([ 8, 6, 10, 10 ]);
   });
+
+  it("stretch min-max", () => {
+    const c = new Canvas(80, 24);
+    const grid = new GridLayout(
+      c.all(),
+      [ GridLayout.stretchWithMinMax(1, 10, 20), GridLayout.stretch(2), GridLayout.stretch(1) ],
+      [ GridLayout.stretch(1) ],
+    );
+
+    grid.lefts.should.eql([ 0, 20, 60, 80 ]);
+    grid.tops.should.eql([ 0, 24 ]);
+
+    c.resize(86, 24);
+    grid.lefts.should.eql([ 0, 20, 64, 86 ]);
+    grid.tops.should.eql([ 0, 24 ]);
+  });
 });
