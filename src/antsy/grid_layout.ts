@@ -9,12 +9,11 @@ export class GridLayout {
   lefts: number[] = [];
   tops: number[] = [];
   resizeListeners: Set<() => void> = new Set();
+  onResize: () => void = () => this.resize(this.region.cols, this.region.rows);
 
   constructor(public region: Region, public colConstraints: Constraint[], public rowConstraints: Constraint[]) {
     this.resize(region.cols, region.rows);
-    region.onResize(() => {
-      this.resize(region.cols, region.rows);
-    });
+    region.onResize(this.onResize);
   }
 
   static fixed(cells: number): Constraint {
@@ -27,6 +26,10 @@ export class GridLayout {
 
   static stretchWithMinimum(factor: number, minimum: number): Constraint {
     return { minimum, factor };
+  }
+
+  detach() {
+    this.region.removeOnResize(this.onResize);
   }
 
   update(colConstraints: Constraint[], rowConstraints: Constraint[]) {

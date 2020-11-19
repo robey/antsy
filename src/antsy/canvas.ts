@@ -172,6 +172,10 @@ export class Region {
     this.resizeListeners.add(f);
   }
 
+  removeOnResize(f: () => void) {
+    this.resizeListeners.delete(f);
+  }
+
   all(): Region {
     return this;
   }
