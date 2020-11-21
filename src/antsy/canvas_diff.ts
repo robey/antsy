@@ -262,7 +262,11 @@ function move(buffer: TextBuffer, newX: number, newY: number): string {
   if (oldX < 0 || oldY < 0) return Terminal.move(newX, newY);
   if (oldX == newX && oldY == newY) return "";
   if (oldX == newX) return Terminal.moveRelative(0, newY - oldY);
-  if (oldY == newY) return Terminal.moveRelative(newX - oldX, 0);
+  // vt100 quirk: if we think the cursor is "just off-screen", what really
+  // happened is that we wrote into the final column of the screen, and
+  // the terminal didn't actually advance the cursor... or did it? for
+  // safety, assume we need to be explicit.
+  if (oldY == newY && oldX < buffer.cols) return Terminal.moveRelative(newX - oldX, 0);
   return Terminal.move(newX, newY);
 }
 

@@ -21,7 +21,7 @@ describe("Canvas", () => {
   it("sets colors", () => {
     const c = new Canvas(5, 3);
     c.all().at(1, 0).color("green").write("wh").color(undefined, "00f").write("ut");
-    escpaint(c).should.eql(`${RESET} ${SET_FG_GREEN}wh${SET_BG_BLUE}ut[[5D`);
+    escpaint(c).should.eql(`${RESET} ${SET_FG_GREEN}wh${SET_BG_BLUE}ut[[H`);
   });
 
   it("clears", () => {
@@ -88,7 +88,7 @@ describe("Canvas", () => {
       const c = new Canvas(30, 3);
       const r = c.all();
       r.at(0, 0).write("012345678901234567890123456789");
-      escpaint(c).should.eql(`${RESET}012345678901234567890123456789[[30D`);
+      escpaint(c).should.eql(`${RESET}012345678901234567890123456789[[H`);
       r.backgroundColor(2).clip(0, 0, 30, 1).clear();
       r.at(10, 0).backgroundColor(5).write("          ");
       escpaint(c).should.eql("[[42m[[K[[10C[[45m          [[20D");
@@ -98,7 +98,7 @@ describe("Canvas", () => {
       const c = new Canvas(35, 3);
       const r = c.all();
       r.at(0, 0).write("01234567890123456789012345678901234");
-      escpaint(c).should.eql(`${RESET}01234567890123456789012345678901234[[35D`);
+      escpaint(c).should.eql(`${RESET}01234567890123456789012345678901234[[H`);
       r.backgroundColor(2).clip(0, 0, 35, 1).clear();
       r.at(8, 0).backgroundColor(5).write("                ");
       escpaint(c).should.eql("[[42m[[K[[8C[[45m[[K[[16C[[42m[[K[[24D");
