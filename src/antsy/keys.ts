@@ -235,6 +235,10 @@ export class KeyParser {
       case "S":
         rv.push(new Key(this.modifiers, KeyType.Function, "4"));
         break;
+      case "Z":
+        // xterm sends a special code for shift-tab!
+        rv.push(new Key(Modifier.Shift, KeyType.Tab));
+        break;
       case "~": {
         if (args.length > 1) this.modifiers = this.modifiers |= (args[1] - 1);
         switch (args[0] || 0) {
