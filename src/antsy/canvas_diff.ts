@@ -47,6 +47,8 @@ export function computeDiff(oldBuffer: TextBuffer, newBuffer: TextBuffer): strin
   if (newBuffer.pendingClear) {
     out += changeAttr(oldBuffer, newBuffer.pendingClear) + Terminal.clearScreen();
     oldBuffer.clearBox(0, 0, oldBuffer.cols, oldBuffer.rows, newBuffer.pendingClear);
+    oldBuffer.cursorX = 0;
+    oldBuffer.cursorY = 0;
   }
 
   // check if scrolling a vertical region would help

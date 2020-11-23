@@ -188,8 +188,6 @@ export class TextBuffer {
       // cleared the whole screen. memoize that.
       this.clearDirty();
       this.pendingClear = attr;
-      this.cursorX = 0;
-      this.cursorY = 0;
     }
   }
 
