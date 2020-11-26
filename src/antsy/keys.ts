@@ -96,7 +96,7 @@ enum Ascii {
   DEL = 127,
 }
 
-const ESC_TIMEOUT = 200;
+const ESC_TIMEOUT = 100;
 
 // parse incoming xterm-encoded keypresses and emit decoded keys
 export class KeyParser {
@@ -122,7 +122,7 @@ export class KeyParser {
       setTimeout(() => {
         if (Date.now() - this.lastKey >= ESC_TIMEOUT) {
           // dangling ESC, maybe it was just ESC...
-          rv.push(new Key(this.modifiers, KeyType.Esc));
+          this.emit([ new Key(this.modifiers, KeyType.Esc) ]);
         }
       }, ESC_TIMEOUT);
     }

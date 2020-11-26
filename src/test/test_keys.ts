@@ -33,6 +33,15 @@ describe("KeyParser", () => {
     bundle(output).should.eql("x,M-c,M-[,y");
   });
 
+  it("raw esc", done => {
+    const { parser, output } = keyParser();
+    parser.feed("\u001b");
+    setTimeout(() => {
+      bundle(output).should.eql("Esc");
+      done();
+    }, 150);
+  });
+
   it("arrows", () => {
     const { parser, output } = keyParser();
     parser.feed("\u001b[A");
