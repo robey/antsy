@@ -168,6 +168,15 @@ export class Region {
     return this.y2 - this.y1;
   }
 
+  // how many cols/rows are we offset within our parent?
+  get parentOffset(): [ number, number ] {
+    return [ this.x1 - (this.parent?.x1 ?? 0), this.y1 - (this.parent?.y1 ?? 0) ];
+  }
+
+  offsetFrom(region: Region): [ number, number ] {
+    return [ this.x1 - region.x1, this.y1 - region.y1 ];
+  }
+
   onResize(f: () => void) {
     this.resizeListeners.add(f);
   }
