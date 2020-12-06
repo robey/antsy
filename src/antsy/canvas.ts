@@ -35,7 +35,7 @@ export class Canvas {
     return [ this.nextBuffer.cursorX, this.nextBuffer.cursorY ];
   }
 
-  onDirty(debounceDelay: number, f: () => void) {
+  onDirty(debounceDelay: number, f: (() => void) | undefined) {
     this.dirtyListener = f;
     this.dirtyDebounceDelay = debounceDelay;
   }
