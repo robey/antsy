@@ -103,6 +103,32 @@ describe("Canvas", () => {
       r.at(8, 0).backgroundColor(5).write("                ");
       escpaint(c).should.eql("[[42m[[K[[8C[[45m[[K[[16C[[42m[[K[[24D");
     });
+
+    it("degenerate case", () => {
+      const c = new Canvas(105, 3);
+      const r = c.all();
+      r.at(0, 0);
+      r.color(4, 0).write("       Entrance to: ")
+      r.color(5, 2).write("dominic/treehouse   ")
+      r.color(5, 2).write("          ");
+      r.color(4, 0).write(" Dom's Treehouse")
+      r.at(104, 0).color(11, 2).write("*");
+      escpaint(c).should.eql(
+        `${RESET}[[7C[[34mEntrance to: [[35m[[42mdominic/treehouse             ` +
+        `[[34m[[40m Dom's Treehouse[[38C[[38;5;11m[[42m*[[H`
+      );
+
+      r.at(0, 0);
+      r.color(4, 0).write("                    ");
+      r.color(5, 2).write("tree house          ");
+      r.color(5, 2).write("                    ");
+      r.color(4, 0).write("        ");
+      r.at(104, 0).color(11, 2).write("*");
+      escpaint(c).should.eql(
+        "[[7C[[34m[[40m             [[35m[[42mtree house       [[13C          " +
+        "[[34m[[40m[[K[[44C[[38;5;11m[[42m*[[H"
+      );
+    });
   });
 
   it("clears a region", () => {

@@ -71,7 +71,7 @@ export function computeDiff(oldBuffer: TextBuffer, newBuffer: TextBuffer): strin
         left = oldBuffer.cursorX;
       }
 
-      if (distance.clears.length > 0 && distance.clears[0].x < left) {
+      while (distance.clears.length > 0 && distance.clears[0].x < left) {
         const c = distance.clears[0];
         out += move(oldBuffer, c.x, y) + changeAttr(oldBuffer, c.attr) + Terminal.eraseLine();
         distance.clears.shift();
@@ -103,7 +103,7 @@ function computeRowDistance(
   oldBuffer: TextBuffer,
   oldy: number,
   newBuffer: TextBuffer,
-  newy: number = oldy
+  newy: number = oldy,
 ): LineDistance {
   // difference between source & dist lines, in # of cells that have to be redrawn
   let distance = 0;
@@ -113,6 +113,12 @@ function computeRowDistance(
   // these are all "runs" of at least THRESHOLD_BLANKS spaces. score them
   // to see if they make things better or worse.
   const candidates: ClearPoint[] = [];
+
+  const endRun = (x: number) => {
+    // once a run reaches the threshold, it's worth scoring.
+    if (run && x - run.x + 1 >= THRESHOLD_BLANKS) candidates.push(run);
+    run = undefined;
+  };
 
   for (const x of range(0, oldBuffer.cols)) {
     const blankAttr = newBuffer.isBlank(x, newy);
@@ -127,18 +133,13 @@ function computeRowDistance(
 
     if (blankAttr === undefined || bg === undefined) {
       // not blank
-      run = undefined;
+      endRun(x);
       continue;
     }
 
-    // extend any current run, or start a new one.
-    if (run && run.bg == bg) {
-      // once a run reaches the threshold, it's worth scoring.
-      if (x - run.x + 1 >= THRESHOLD_BLANKS) {
-        candidates.push(run);
-        run = undefined;
-      }
-    } else {
+    // start a new run?
+    if (!run || run.bg != bg) {
+      endRun(x);
       run = new ClearPoint(blankAttr, bg, x);
     }
 
@@ -161,6 +162,8 @@ function computeRowDistance(
       if (run) run.score++;
     }
   }
+
+  endRun(oldBuffer.cols);
 
   // keep only the ones with a positive score.
   let clears: ClearPoint[] = [];
