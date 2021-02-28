@@ -73,7 +73,9 @@ export function color_from_hex(hex: string): number {
     parseInt(hex.slice(2, 4), 16),
     parseInt(hex.slice(4, 6), 16)
   ];
-  const index = nearest_color(red, green, blue);
+  let index = nearest_color(red, green, blue);
+  // some terminals have a bug where "color 0" is not actually black, so convert it to gray0 instead
+  if (index == 0) index = 16;
   cache[hex] = index;
   return index;
 }

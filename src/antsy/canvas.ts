@@ -4,7 +4,7 @@ import { TextBuffer } from "./text_buffer";
 import * as xterm256 from "./xterm256";
 
 const WHITE = 7; // xterm256.get_color("gray");
-const BLACK = 0; // xterm256.get_color("black");
+const BLACK = 16; // xterm256.get_color("black");
 const DEFAULT_ATTR = (BLACK << 8) | WHITE;
 
 const SPACE = 0x20;
