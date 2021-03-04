@@ -40,8 +40,8 @@ describe("xterm256", () => {
     });
 
     it("color, from hex", () => {
-      xterm256.color_from_hex("000").should.eql(0);
-      xterm256.color_from_hex("000000").should.eql(0);
+      xterm256.color_from_hex("000").should.eql(16);
+      xterm256.color_from_hex("000000").should.eql(16);
       xterm256.color_from_hex("ccc").should.eql(252); // d0d0d0
       xterm256.color_from_hex("0c0c0c").should.eql(232); // 080808
       xterm256.color_from_hex("7f7f00").should.eql(3);
@@ -54,9 +54,9 @@ describe("xterm256", () => {
     it("color by name", () => {
       xterm256.get_color("blue").should.eql(12);
       xterm256.get_color("gray").should.eql(8);
-      xterm256.get_color("#000").should.eql(0);
+      xterm256.get_color("#000").should.eql(16);
       xterm256.get_color("wuh").should.eql(7);
-      xterm256.get_color("black").should.eql(0);
+      xterm256.get_color("black").should.eql(16);
     });
 
     it("get_rgb", () => {

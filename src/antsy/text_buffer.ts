@@ -84,7 +84,15 @@ export class TextBuffer {
 
   getAttr(x: number, y: number): number {
     const i = this.cols * y + x;
-    return this.attrs[i];
+    const attr = this.attrs[i];
+    // fix for "we use 16 when we mean 0 because of xterm bugs"
+    return attr >= 0x100 ? attr : (0x1000 | attr);
+  }
+
+  getBackground(x: number, y: number): number {
+    const bg = (this.getAttr(x, y) >> 8) & 0xff;
+    // fix for "we use 16 when we mean 0 because of xterm bugs"
+    return bg == 0 ? 16 : bg;
   }
 
   getChar(x: number, y: number): number {
@@ -117,11 +125,10 @@ export class TextBuffer {
   }
 
   isSame(x: number, y: number, other: TextBuffer, othery: number = y): boolean {
-    const i = this.cols * y + x;
-    const oi = this.cols * othery + x;
-    if (this.chars[i] != other.chars[oi]) return false;
-    if (this.chars[i] == SPACE) return ((this.attrs[i] >> 8) & 0xff) == ((other.attrs[oi] >> 8) & 0xff);
-    return this.attrs[i] == other.attrs[oi];
+    const ch = this.getChar(x, y);
+    if (ch != other.getChar(x, othery)) return false;
+    if (ch == SPACE) return this.getBackground(x, y) == other.getBackground(x, othery);
+    return this.getAttr(x, y) == other.getAttr(x, othery);
   }
 
   copySegment(xdest: number, ydest: number, xsource: number, ysource: number, count: number) {
