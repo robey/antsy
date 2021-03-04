@@ -73,13 +73,14 @@ export function computeDiff(oldBuffer: TextBuffer, newBuffer: TextBuffer): strin
 
       while (distance.clears.length > 0 && distance.clears[0].x < left) {
         const c = distance.clears[0];
-        out += move(oldBuffer, c.x, y) + changeAttr(oldBuffer, c.attr) + Terminal.eraseLine();
+        out += move(oldBuffer, c.x, y) + changeAttr(oldBuffer, c.attr, false) + Terminal.eraseLine();
         distance.clears.shift();
       }
       out += move(oldBuffer, left, y);
       for (const x of range(left, right)) {
-        out += changeAttr(oldBuffer, newBuffer.getAttr(x, y));
-        out += String.fromCodePoint(newBuffer.getChar(x, y));
+        const ch = String.fromCodePoint(newBuffer.getChar(x, y));
+        out += changeAttr(oldBuffer, newBuffer.getAttr(x, y), ch != " ");
+        out += ch;
       }
 
       oldBuffer.setSpan(left, y, right, newBuffer);
@@ -89,7 +90,7 @@ export function computeDiff(oldBuffer: TextBuffer, newBuffer: TextBuffer): strin
     // erase happened after all the dirty bits.
     while (distance.clears.length > 0) {
       const c = distance.clears[0];
-      out += move(oldBuffer, c.x, y) + changeAttr(oldBuffer, c.attr) + Terminal.eraseLine();
+      out += move(oldBuffer, c.x, y) + changeAttr(oldBuffer, c.attr, false) + Terminal.eraseLine();
       distance.clears.shift();
     }
   }
@@ -249,11 +250,12 @@ function computeBlankDistance(buffer: TextBuffer, y: number, blank: number): num
 }
 
 // change a buffer's attr (fg & bg colors), and return the smallest code needed to do that.
-function changeAttr(buffer: TextBuffer, attr: number): string {
+function changeAttr(buffer: TextBuffer, attr: number, needForeground: boolean = true): string {
   // if the current attr is -1, force both fg & bg to be generated.
   if (buffer.attr == -1) buffer.attr = 0xffff ^ attr;
   if (attr == buffer.attr) return "";
-  const newfg = attr & 0xff, newbg = (attr >> 8) & 0xff;
+  if (!needForeground) attr = (attr & 0xff00) | (buffer.attr & 0xff);
+  let newfg = attr & 0xff, newbg = (attr >> 8) & 0xff;
   const oldfg = buffer.attr & 0xff, oldbg = (buffer.attr >> 8) & 0xff;
   buffer.attr = attr;
   return (oldfg != newfg ? Terminal.fg(newfg) : "") + ((oldbg != newbg) ? Terminal.bg(newbg) : "");

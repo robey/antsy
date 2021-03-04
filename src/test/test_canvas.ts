@@ -3,7 +3,8 @@ import { Canvas } from "../antsy/canvas";
 import "should";
 import "source-map-support/register";
 
-const RESET_COLOR = "[[37m[[40m";
+const SET_BG_BLACK = "[[48;5;16m";
+const RESET_COLOR = "[[37m" + SET_BG_BLACK;
 const CLEAR = "[[2J[[H";
 const RESET = RESET_COLOR + CLEAR;
 const SET_FG_GREEN = "[[32m";
@@ -72,7 +73,7 @@ describe("Canvas", () => {
       r.at(0, 0).write("random-words!");
       escpaint(c).should.eql(`${RESET}random-words![[13D`);
       r.at(0, 0).color(4).write("           ?");
-      escpaint(c).should.eql(`[[34m[[K[[11C?[[37m![[13D`);
+      escpaint(c).should.eql(`[[K[[11C[[34m?[[37m![[13D`);
     });
 
     it("at the end", () => {
@@ -115,7 +116,7 @@ describe("Canvas", () => {
       r.at(104, 0).color(11, 2).write("*");
       escpaint(c).should.eql(
         `${RESET}[[7C[[34mEntrance to: [[35m[[42mdominic/treehouse             ` +
-        `[[34m[[40m Dom's Treehouse[[38C[[38;5;11m[[42m*[[H`
+        `${SET_BG_BLACK} [[34mDom's Treehouse[[38C[[38;5;11m[[42m*[[H`
       );
 
       r.at(0, 0);
@@ -125,8 +126,8 @@ describe("Canvas", () => {
       r.color(4, 0).write("        ");
       r.at(104, 0).color(11, 2).write("*");
       escpaint(c).should.eql(
-        "[[7C[[34m[[40m             [[35m[[42mtree house       [[13C          " +
-        "[[34m[[40m[[K[[44C[[38;5;11m[[42m*[[H"
+        `[[7C${SET_BG_BLACK}             [[35m[[42mtree house       [[13C          ` +
+        `${SET_BG_BLACK}      [[66D`
       );
     });
   });
@@ -151,10 +152,10 @@ describe("Canvas", () => {
     c.clip(3, 3, 10, 10).draw(box.all());
     escpaint(c).should.eql(
       `${RESET}[[44m[[K[[B[[K[[B[[K[[B` +
-      `   [[38;5;15m[[41m+--+[[37m[[44m   ` +
-      `[[5H   [[38;5;15m[[41m|  |[[37m[[44m   ` +
-      `[[6H   [[38;5;15m[[41m|  |[[37m[[44m   ` +
-      `[[7H   [[38;5;15m[[41m+--+[[37m[[44m   ` +
+      `   [[38;5;15m[[41m+--+[[44m   ` +
+      `[[5H   [[41m|  |[[44m   ` +
+      `[[6H   [[41m|  |[[44m   ` +
+      `[[7H   [[41m+--+[[44m   ` +
       `[[8H[[K[[B[[K[[B[[K[[9A`
     );
 
@@ -163,9 +164,9 @@ describe("Canvas", () => {
     c.clip(4, 4, 10, 10).draw(box.all());
     escpaint(c).should.eql(
       `[[3B[[K` +
-      `[[5;4H [[38;5;15m[[41m+--+` +
-      `[[6;4H[[37m[[44m [[38;5;15m[[41m|  |` +
-      `[[7;4H[[37m[[44m [[38;5;15m[[41m|  |` +
+      `[[5;4H [[41m+--+` +
+      `[[6;4H[[44m [[41m|  |` +
+      `[[7;4H[[44m [[41m|  |` +
       `[[8;5H+--+[[H`
     );
 
@@ -174,9 +175,9 @@ describe("Canvas", () => {
     c.all().at(3, 3).draw(box.all());
     escpaint(c).should.eql(
       `[[4;4H+--+` +
-      `[[5;4H|  |[[37m[[44m ` +
-      `[[6;4H[[38;5;15m[[41m|  |[[37m[[44m ` +
-      `[[7;4H[[38;5;15m[[41m+--+[[37m[[44m ` +
+      `[[5;4H|  |[[44m ` +
+      `[[6;4H[[41m|  |[[44m ` +
+      `[[7;4H[[41m+--+[[44m ` +
       `[[8H[[K[[7A`
     );
   });
@@ -215,8 +216,8 @@ describe("Canvas", () => {
 
     c.redraw();
     escpaint(c).should.eql(
-      `${RESET}[[37m[[40m[[K[[B[[K[[B[[K[[B     [[38;5;12mhello` +
-      `[[5H[[37m[[K[[B[[K[[B[[K[[B[[K[[B[[K[[B[[38;5;9mok[[37m[[K[[H`
+      `${RESET}${SET_BG_BLACK}[[K[[B[[K[[B[[K[[B     [[38;5;12mhello` +
+      `[[5H[[K[[B[[K[[B[[K[[B[[K[[B[[K[[B[[38;5;9mok[[K[[H`
     );
   });
 
