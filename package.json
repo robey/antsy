@@ -1,6 +1,6 @@
 {
   "name": "antsy",
-  "version": "2.6.2",
+  "version": "2.7.0",
   "description": "draw full-color (xterm-256) ansi graphics into a buffer",
   "keywords": [
     "ansi",
