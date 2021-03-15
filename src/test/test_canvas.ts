@@ -237,12 +237,12 @@ describe("Canvas", () => {
       `${RESET}[[3;6H${SET_FG_BLUE}hello[[5;3H${SET_FG_RED}greet[[3B${SET_FG_B_GREEN}ok[[H`
     );
 
-    c.transformAttr((fg, _bg) => [ rgb_to_xterm((xterm_to_rgb(fg) & 0xfefefe) >> 1) ]);
+    c.transform((fg, _bg) => [ rgb_to_xterm((xterm_to_rgb(fg) & 0xfefefe) >> 1) ]);
     escpaint(c).should.eql(
       `[[3;6H[[34mhello[[5;3H[[31mgreet[[3B[[32mok[[H`
     );
 
-    c.transformAttr((fg, _bg) => [ rgb_to_xterm((xterm_to_rgb(fg) & 0xfefefe) >> 1) ]);
+    c.transform((fg, _bg) => [ rgb_to_xterm((xterm_to_rgb(fg) & 0xfefefe) >> 1) ]);
     escpaint(c).should.eql(
       `[[3;6H[[38;5;17mhello[[5;3H[[38;5;52mgreet[[3B[[38;5;22mok[[H`
     );

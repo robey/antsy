@@ -91,7 +91,7 @@ export class Canvas {
   }
 
   // return [ fg, bg?, char? ]
-  transformAttr(f: (fg: number, bg: number, char: number, x: number, y: number) => number[]) {
+  transform(f: (fg: number, bg: number, char: number, x: number, y: number) => number[]) {
     this.nextBuffer.transform(f);
   }
 
