@@ -2,11 +2,14 @@ import { Canvas } from "../antsy/canvas";
 
 import "should";
 import "source-map-support/register";
+import { rgb_to_xterm, xterm_to_rgb } from "../antsy/xterm256";
 
 const SET_BG_BLACK = "[[48;5;16m";
 const RESET_COLOR = "[[37m" + SET_BG_BLACK;
 const CLEAR = "[[2J[[H";
 const RESET = RESET_COLOR + CLEAR;
+const SET_FG_BLUE = "[[38;5;12m";
+const SET_FG_B_GREEN = "[[38;5;10m";
 const SET_FG_GREEN = "[[32m";
 const SET_FG_RED = "[[38;5;9m";
 const SET_BG_BLUE = "[[48;5;12m";
@@ -56,6 +59,7 @@ describe("Canvas", () => {
     r.at(0, 0).color("purple").write("one\ntwo\nthree");
     escpaint(c).should.eql(`${RESET}[[B[[35mtwo[[3Hthree[[H`);
   });
+
 
   describe("uses clear-to-EOL while painting", () => {
     it("in the middle", () => {
@@ -131,6 +135,7 @@ describe("Canvas", () => {
       );
     });
   });
+
 
   it("clears a region", () => {
     const c = new Canvas(10, 10);
@@ -220,6 +225,29 @@ describe("Canvas", () => {
       `[[5H[[K[[B[[K[[B[[K[[B[[K[[B[[K[[B[[38;5;9mok[[K[[H`
     );
   });
+
+  it("transformAttr", () => {
+    const c = new Canvas(10, 10);
+    c.all().color("00f").at(5, 2).write("hello");
+    c.all().color("f00").at(2, 4).write("greet");
+    c.all().color("0f0").at(7, 7).write("ok");
+    console.log(c.paintInline());
+
+    escpaint(c).should.eql(
+      `${RESET}[[3;6H${SET_FG_BLUE}hello[[5;3H${SET_FG_RED}greet[[3B${SET_FG_B_GREEN}ok[[H`
+    );
+
+    c.transformAttr((fg, _bg) => [ rgb_to_xterm((xterm_to_rgb(fg) & 0xfefefe) >> 1) ]);
+    escpaint(c).should.eql(
+      `[[3;6H[[34mhello[[5;3H[[31mgreet[[3B[[32mok[[H`
+    );
+
+    c.transformAttr((fg, _bg) => [ rgb_to_xterm((xterm_to_rgb(fg) & 0xfefefe) >> 1) ]);
+    escpaint(c).should.eql(
+      `[[3;6H[[38;5;17mhello[[5;3H[[38;5;52mgreet[[3B[[38;5;22mok[[H`
+    );
+  });
+
 
   describe("scrolls", () => {
     function stars(): Canvas {

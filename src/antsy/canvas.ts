@@ -90,6 +90,11 @@ export class Canvas {
     }
   }
 
+  // return [ fg, bg?, char? ]
+  transformAttr(f: (fg: number, bg: number, char: number, x: number, y: number) => number[]) {
+    this.nextBuffer.transform(f);
+  }
+
   paint(): string {
     // don't create currentBuffer unless they actually call paint
     if (this.currentBuffer === undefined) {

@@ -73,10 +73,20 @@ export function color_from_hex(hex: string): number {
     parseInt(hex.slice(2, 4), 16),
     parseInt(hex.slice(4, 6), 16)
   ];
+  const index = color_from_r_g_b(red, green, blue);
+  cache[hex] = index;
+  return index;
+}
+
+// return an RRGGBB value for the given xterm color
+export function rgb_to_xterm(rgb: number): number {
+  return color_from_r_g_b((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff);
+}
+
+export function color_from_r_g_b(red: number, green: number, blue: number): number {
   let index = nearest_color(red, green, blue);
   // some terminals have a bug where "color 0" is not actually black, so convert it to gray0 instead
   if (index == 0) index = 16;
-  cache[hex] = index;
   return index;
 }
 

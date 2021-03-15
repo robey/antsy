@@ -233,4 +233,19 @@ export class TextBuffer {
   setAllDirty() {
     for (let i = 0; i < this.dirty.length; i++) this.dirty[i] = 0xff;
   }
+
+  // return [ fg, bg?, char? ]
+  transform(f: (fg: number, bg: number, char: number, x: number, y: number) => number[]) {
+    for (let y = 0; y < this.rows; y++) {
+      for (let x = 0; x < this.cols; x++) {
+        const attr = this.getAttr(x, y);
+        const ch = this.getChar(x, y);
+        const fg = attr & 0xff;
+        const bg = (attr >> 8) & 0xff;
+        const change = f(fg, bg, ch, x, y);
+        const newAttr = change[0] | ((change[1] ?? bg) << 8);
+        this.put(x, y, newAttr, change[2] ?? ch);
+      }
+    }
+  }
 }
