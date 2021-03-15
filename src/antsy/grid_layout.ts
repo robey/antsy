@@ -82,6 +82,10 @@ export class GridLayout {
 
     for (const f of [...this.resizeListeners]) f();
   }
+
+  static solveConstraints(constraints: Constraint[], size: number): number[] {
+    return calculateSizes(constraints, size);
+  }
 }
 
 
