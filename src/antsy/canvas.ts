@@ -105,7 +105,7 @@ export class Canvas {
     if (this.forceAll) {
       this.forceAll = false;
       this.currentBuffer = new TextBuffer(this.cols, this.rows);
-      clear += Terminal.fg(DEFAULT_ATTR & 0xff) + Terminal.bg((DEFAULT_ATTR >> 8) & 0xff) + Terminal.clearScreen();
+      this.nextBuffer.pendingClear = DEFAULT_ATTR;
       this.nextBuffer.setAllDirty();
     }
 
