@@ -10,6 +10,8 @@ const DEFAULT_ATTR = (BLACK << 8) | WHITE;
 const SPACE = 0x20;
 
 
+let ID = 1;
+
 export class Canvas {
   // next: what we're drawing
   nextBuffer: TextBuffer;
@@ -26,9 +28,18 @@ export class Canvas {
   dirtyTimer?: NodeJS.Timeout;
   dirtyDebounceDelay = 0;
 
+  // for debugging
+  id: number;
+
   constructor(public cols: number, public rows: number) {
     this.nextBuffer = new TextBuffer(cols, rows);
     this.nextBuffer.clearBox(0, 0, cols, rows, DEFAULT_ATTR);
+    this.id = ID++;
+  }
+
+  toString(): string {
+    return `Canvas(${this.nextBuffer.cols} x ${this.nextBuffer.rows}, ` +
+      `cursor (${this.nextBuffer.cursorX}, ${this.nextBuffer.cursorY}), dirty=${this.dirty}`;
   }
 
   get cursor(): [ number, number ] {
@@ -160,7 +171,8 @@ export class Region {
   }
 
   toString(): string {
-    return `Region((${this.x1}, ${this.y1}) -> (${this.x2}, ${this.y2}), ` +
+    return `Region((${this.x1}, ${this.y1}) -> (${this.x2}, ${this.y2}) ` +
+      `of Canvas ${this.canvas.id}, ` +
       `cursor (${this.cursorX}, ${this.cursorY}), attr=$${this.attr.toString(16)}, ` +
       `listeners=${this.resizeListeners.size})`;
   }
