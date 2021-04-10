@@ -37,7 +37,8 @@ describe("KeyParser", () => {
     const { parser, output } = keyParser();
     parser.feed("\u001b");
     setTimeout(() => {
-      bundle(output).should.eql("Esc");
+      parser.feed("a");
+      bundle(output).should.eql("Esc,a");
       done();
     }, 150);
   });

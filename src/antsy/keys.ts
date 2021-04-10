@@ -123,6 +123,7 @@ export class KeyParser {
         if (Date.now() - this.lastKey >= ESC_TIMEOUT) {
           // dangling ESC, maybe it was just ESC...
           this.emit([ new Key(this.modifiers, KeyType.Esc) ]);
+          this.state = State.Normal;
         }
       }, ESC_TIMEOUT);
     }
