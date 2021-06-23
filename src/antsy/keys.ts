@@ -5,16 +5,6 @@ export enum Modifier {
   Meta = 8,
 }
 
-function modifiersFromFlags(n: number): Modifier[] {
-  const rv: Modifier[] = [];
-  n -= 1;
-  if (n & 8) rv.push(Modifier.Meta);
-  if (n & 2) rv.push(Modifier.Alt);
-  if (n & 1) rv.push(Modifier.Shift);
-  if (n & 4) rv.push(Modifier.Control);
-  return rv;
-}
-
 export enum KeyType {
   Normal,
   Function,
@@ -98,48 +88,75 @@ enum Ascii {
 
 const ESC_TIMEOUT = 100;
 
+
 // parse incoming xterm-encoded keypresses and emit decoded keys
-export class KeyParser {
+export class KeyParser implements AsyncIterator<Key>, AsyncIterable<Key> {
   state: State = State.Normal;
   modifiers: Modifier = 0;
   buffer = "";
   lastKey = Date.now();
 
-  constructor(public emit: (keys: Key[]) => void) {
-    // pass
+  // async iterator state: queued keys or waiting reader
+  queue: Key[] = [];
+  resolve: ((value: IteratorResult<Key>) => void) | undefined;
+  ended = false;
+
+  [Symbol.asyncIterator]() {
+    return this;
+  }
+
+  next(): Promise<IteratorResult<Key>> {
+    return new Promise(resolve => {
+      this.resolve = resolve;
+      this.wake();
+    });
+  }
+
+  // check if we should hand out keys to a waiting reader
+  private wake() {
+    if (!this.resolve || (!this.ended && this.queue.length == 0)) return;
+    const resolve = this.resolve;
+    this.resolve = undefined;
+    const value = this.queue.shift()!;
+    resolve({ done: this.ended, value });
+  }
+
+  end() {
+    this.ended = true;
+    this.wake();
   }
 
   feed(s: string) {
-    const rv: Key[] = [];
     let checkMeta = false;
     for (let c of Array.from(s).map(s => s.codePointAt(0) || 0)) {
-      checkMeta = this.feedCodepoint(c, rv);
+      checkMeta = this.feedCodepoint(c);
     }
     this.lastKey = Date.now();
-    if (rv.length > 0) this.emit(rv);
+    this.wake();
 
     if (checkMeta) {
       setTimeout(() => {
         if (Date.now() - this.lastKey >= ESC_TIMEOUT) {
           // dangling ESC, maybe it was just ESC...
-          this.emit([ new Key(this.modifiers, KeyType.Esc) ]);
+          this.queue.push(new Key(this.modifiers, KeyType.Esc));
           this.state = State.Normal;
+          this.wake();
         }
       }, ESC_TIMEOUT);
     }
   }
 
   // returns true if it processed a dangling ESC
-  feedCodepoint(c: number, rv: Key[]): boolean {
+  feedCodepoint(c: number): boolean {
     switch (this.state) {
       case State.Normal:
         switch (c) {
           case Ascii.TAB:
-            rv.push(new Key(this.modifiers, KeyType.Tab));
+            this.queue.push(new Key(this.modifiers, KeyType.Tab));
             this.modifiers = 0;
             return false;
           case Ascii.CR:
-            rv.push(new Key(this.modifiers, KeyType.Return));
+            this.queue.push(new Key(this.modifiers, KeyType.Return));
             this.modifiers = 0;
             return false;
           case Ascii.ESC:
@@ -147,7 +164,7 @@ export class KeyParser {
             return true;
           case Ascii.BACKSPACE:
           case Ascii.DEL:
-            rv.push(new Key(this.modifiers, KeyType.Backspace));
+            this.queue.push(new Key(this.modifiers, KeyType.Backspace));
             this.modifiers = 0;
             return false;
           default:
@@ -156,7 +173,7 @@ export class KeyParser {
               this.modifiers |= Modifier.Control;
               c += 64;
             }
-            rv.push(new Key(this.modifiers, KeyType.Normal, String.fromCodePoint(c)));
+            this.queue.push(new Key(this.modifiers, KeyType.Normal, String.fromCodePoint(c)));
             this.modifiers = 0;
             return false;
         }
@@ -174,7 +191,7 @@ export class KeyParser {
             // well crap. assume they meant meta.
             this.modifiers |= Modifier.Meta;
             this.state = State.Normal;
-            return this.feedCodepoint(c, rv);
+            return this.feedCodepoint(c);
         }
 
       case State.CSI:
@@ -182,136 +199,136 @@ export class KeyParser {
           this.buffer += String.fromCodePoint(c);
           return false;
         }
-        this.parseCsi(rv, String.fromCodePoint(c), this.buffer.split(/[;:]/).map(s => parseInt(s, 10)));
+        this.parseCsi(String.fromCodePoint(c), this.buffer.split(/[;:]/).map(s => parseInt(s, 10)));
         this.state = State.Normal;
         this.modifiers = 0;
         return false;
 
       case State.SS3:
         if (c >= Ascii.P && c <= Ascii.S) {
-          rv.push(new Key(this.modifiers, KeyType.Function, (1 + c - Ascii.P).toString()));
+          this.queue.push(new Key(this.modifiers, KeyType.Function, (1 + c - Ascii.P).toString()));
           this.state = State.Normal;
           this.modifiers = 0;
           return false;
         } else {
           // what is ESC O (something)? we don't support it.
-          rv.push(new Key(Modifier.Meta, KeyType.Normal, "O"));
+          this.queue.push(new Key(Modifier.Meta, KeyType.Normal, "O"));
           this.state = State.Normal;
-          return this.feedCodepoint(c, rv);
+          return this.feedCodepoint(c);
         }
     }
   }
 
-  parseCsi(rv: Key[], command: string, args: number[]) {
+  parseCsi(command: string, args: number[]) {
     if (args[0] == 1 && args.length >= 2) this.modifiers |= (args[1] - 1);
 
     switch (command) {
       case "A":
-        rv.push(new Key(this.modifiers, KeyType.Up));
+        this.queue.push(new Key(this.modifiers, KeyType.Up));
         break;
       case "B":
-        rv.push(new Key(this.modifiers, KeyType.Down));
+        this.queue.push(new Key(this.modifiers, KeyType.Down));
         break;
       case "C":
-        rv.push(new Key(this.modifiers, KeyType.Right));
+        this.queue.push(new Key(this.modifiers, KeyType.Right));
         break;
       case "D":
-        rv.push(new Key(this.modifiers, KeyType.Left));
+        this.queue.push(new Key(this.modifiers, KeyType.Left));
         break;
       case "H":
-        rv.push(new Key(this.modifiers, KeyType.Home));
+        this.queue.push(new Key(this.modifiers, KeyType.Home));
         break;
       case "F":
-        rv.push(new Key(this.modifiers, KeyType.End));
+        this.queue.push(new Key(this.modifiers, KeyType.End));
         break;
       case "P":
-        rv.push(new Key(this.modifiers, KeyType.Function, "1"));
+        this.queue.push(new Key(this.modifiers, KeyType.Function, "1"));
         break;
       case "Q":
-        rv.push(new Key(this.modifiers, KeyType.Function, "2"));
+        this.queue.push(new Key(this.modifiers, KeyType.Function, "2"));
         break;
       case "R":
-        rv.push(new Key(this.modifiers, KeyType.Function, "3"));
+        this.queue.push(new Key(this.modifiers, KeyType.Function, "3"));
         break;
       case "S":
-        rv.push(new Key(this.modifiers, KeyType.Function, "4"));
+        this.queue.push(new Key(this.modifiers, KeyType.Function, "4"));
         break;
       case "Z":
         // xterm sends a special code for shift-tab!
-        rv.push(new Key(Modifier.Shift, KeyType.Tab));
+        this.queue.push(new Key(Modifier.Shift, KeyType.Tab));
         break;
       case "~": {
         if (args.length > 1) this.modifiers = this.modifiers |= (args[1] - 1);
         switch (args[0] || 0) {
           case 1:
-            rv.push(new Key(this.modifiers, KeyType.Home));
+            this.queue.push(new Key(this.modifiers, KeyType.Home));
             break;
           case 2:
-            rv.push(new Key(this.modifiers, KeyType.Insert));
+            this.queue.push(new Key(this.modifiers, KeyType.Insert));
             break;
           case 3:
-            rv.push(new Key(this.modifiers, KeyType.Delete));
+            this.queue.push(new Key(this.modifiers, KeyType.Delete));
             break;
           case 4:
-            rv.push(new Key(this.modifiers, KeyType.End));
+            this.queue.push(new Key(this.modifiers, KeyType.End));
             break;
           case 5:
-            rv.push(new Key(this.modifiers, KeyType.PageUp));
+            this.queue.push(new Key(this.modifiers, KeyType.PageUp));
             break;
           case 6:
-            rv.push(new Key(this.modifiers, KeyType.PageDown));
+            this.queue.push(new Key(this.modifiers, KeyType.PageDown));
             break;
           case 11:
-            rv.push(new Key(this.modifiers, KeyType.Function, "1"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "1"));
             break;
           case 12:
-            rv.push(new Key(this.modifiers, KeyType.Function, "2"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "2"));
             break;
           case 13:
-            rv.push(new Key(this.modifiers, KeyType.Function, "3"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "3"));
             break;
           case 14:
-            rv.push(new Key(this.modifiers, KeyType.Function, "4"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "4"));
             break;
           case 15:
-            rv.push(new Key(this.modifiers, KeyType.Function, "5"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "5"));
             break;
           // what happened to 16?
           case 17:
-            rv.push(new Key(this.modifiers, KeyType.Function, "6"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "6"));
             break;
           case 18:
-            rv.push(new Key(this.modifiers, KeyType.Function, "7"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "7"));
             break;
           case 19:
-            rv.push(new Key(this.modifiers, KeyType.Function, "8"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "8"));
             break;
           case 20:
-            rv.push(new Key(this.modifiers, KeyType.Function, "9"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "9"));
             break;
           case 21:
-            rv.push(new Key(this.modifiers, KeyType.Function, "10"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "10"));
             break;
           // what happened to 22?
           case 23:
-            rv.push(new Key(this.modifiers, KeyType.Function, "11"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "11"));
             break;
           case 24:
-            rv.push(new Key(this.modifiers, KeyType.Function, "12"));
+            this.queue.push(new Key(this.modifiers, KeyType.Function, "12"));
             break;
           case 200:
-            rv.push(new Key(this.modifiers, KeyType.PasteBegin));
+            this.queue.push(new Key(this.modifiers, KeyType.PasteBegin));
             break;
           case 201:
-            rv.push(new Key(this.modifiers, KeyType.PasteEnd));
+            this.queue.push(new Key(this.modifiers, KeyType.PasteEnd));
             break;
         }
         break;
       }
       default:
         // well crap. CSI + garbage?
-        rv.push(new Key(Modifier.Meta, KeyType.Normal, "["));
-        rv.push(new Key(0, KeyType.Normal, command));
+        this.queue.push(new Key(Modifier.Meta, KeyType.Normal, "["));
+        this.queue.push(new Key(0, KeyType.Normal, command));
         break;
     }
   }
