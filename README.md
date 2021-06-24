@@ -133,7 +133,7 @@ For example, to build a simple text UI that has a fixed edit region at the botto
 +---------------+-------+
 |           C           |   2
 +-----------------------+
-````
+```
 
 ...you could use a grid layout with 2 columns and 2 rows. The left column and top row are stretchy:
 
@@ -184,6 +184,37 @@ const C = grid.layout(0, 1, 2, 2);
 - `resize(cols: number, rows: number)`
 
     Recompute the grid boundaries. This is automatically called whenever the grid's region (in the constructor) is resized, and it automatically calls `resize` on any regions it's handed out in `layout`, so you probably never need to call this directly.
+
+
+## KeyParser
+
+Antsy can also parse a stream of xterm/VT input and convert it into key events.
+
+- `new KeyParser()  // implements AsyncIterator<Key>, AsyncIterable<Key>`
+
+Feed incoming bytes:
+
+- `feed(s: string): void`
+
+Parsed key events will emerge on the async iterator as `Key` objects. Each `Key` object contains three fields:
+
+- `modifiers: Modifier`
+
+    A bitmap of modifier keys: `Shift`, `Alt`, `Control`, `Meta`
+
+- `type: KeyType`
+
+    Either `Normal` for a common ASCII symbol (like "a" or "7" or ":"), or one of:
+    - `Up`, `Down`, `Left`, `Right` arrow keys
+    - `PageUp`, `PageDown`, `Home`, `End` extreme arrow keys
+    - `Insert`, `Delete` vestigial IBM keys
+    - `Tab`, `Return`, `Esc`, `Backspace`
+    - `Function` (with `key` being "1" through "12")
+    - `PasteBegin`, `PasteEnd` to mark xterm paste boundaries
+
+- `key: string`
+
+    The ASCII key pressed, or the number of the function key, or "".
 
 
 ## How it works
