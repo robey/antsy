@@ -101,6 +101,9 @@ export class KeyParser implements AsyncIterator<Key>, AsyncIterable<Key> {
   resolve: ((value: IteratorResult<Key>) => void) | undefined;
   ended = false;
 
+  receiver: ((key: Key) => Promise<void>) | undefined;
+  receiverRunning = false;
+
   [Symbol.asyncIterator]() {
     return this;
   }
@@ -114,6 +117,15 @@ export class KeyParser implements AsyncIterator<Key>, AsyncIterable<Key> {
 
   // check if we should hand out keys to a waiting reader
   private wake() {
+    if (this.receiver && !this.receiverRunning) {
+      this.receiverRunning = true;
+      setTimeout(async () => {
+        while (this.queue.length > 0 && this.receiver) await this.receiver(this.queue.shift()!);
+        this.receiverRunning = false;
+      }, 0);
+      return;
+    }
+
     if (!this.resolve || (!this.ended && this.queue.length == 0)) return;
     const resolve = this.resolve;
     this.resolve = undefined;
@@ -124,6 +136,14 @@ export class KeyParser implements AsyncIterator<Key>, AsyncIterable<Key> {
   end() {
     this.ended = true;
     this.wake();
+  }
+
+  pipe(receiver: (key: Key) => Promise<void>) {
+    this.receiver = receiver;
+  }
+
+  unpipe() {
+    this.receiver = undefined;
   }
 
   feed(s: string) {

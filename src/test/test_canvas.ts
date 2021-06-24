@@ -228,7 +228,6 @@ describe("Canvas", () => {
     c.all().color("00f").at(5, 2).write("hello");
     c.all().color("f00").at(2, 4).write("greet");
     c.all().color("0f0").at(7, 7).write("ok");
-    console.log(c.paintInline());
 
     escpaint(c).should.eql(
       `${RESET}[[3;6H${SET_FG_BLUE}hello[[5;3H${SET_FG_RED}greet[[3B${SET_FG_B_GREEN}ok[[H`

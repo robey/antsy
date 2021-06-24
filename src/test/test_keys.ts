@@ -35,6 +35,15 @@ describe("KeyParser", () => {
     bundle(output).should.eql("h,e,l,l,o");
   });
 
+  it("pipe", async () => {
+    const p = new KeyParser();
+    p.pipe(async k => { output.push(k); await delay(1); });
+    p.feed("hell");
+    p.feed("o");
+    await delay(10);
+    bundle(output).should.eql("h,e,l,l,o");
+  });
+
   it("control codes", async () => {
     parser.feed("hell\u0001s\u0009\u0008\u000d\u007f");
     await delay(1);
